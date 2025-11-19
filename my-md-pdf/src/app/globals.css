@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+/* SimpleMDE Editor Styles */
+@import "easymde/dist/easymde.min.css";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Custom SimpleMDE Editor Styling */
+.EasyMDEContainer {
+  height: 100%;
+}
+
+.EasyMDEContainer .CodeMirror {
+  border: none;
+  border-radius: 0.5rem;
+  height: 600px;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.EasyMDEContainer .editor-toolbar {
+  border: none;
+  border-bottom: 1px solid #e2e8f0;
+  border-radius: 0.5rem 0.5rem 0 0;
+  background: #f8fafc;
+}
+
+.EasyMDEContainer .editor-toolbar button {
+  color: #475569;
+}
+
+.EasyMDEContainer .editor-toolbar button:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+}
+
+.EasyMDEContainer .editor-toolbar.fullscreen {
+  background: #ffffff;
+}
+
+.EasyMDEContainer .CodeMirror-fullscreen {
+  background: #ffffff;
+}
