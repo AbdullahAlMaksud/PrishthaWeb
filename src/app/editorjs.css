@@ -1,0 +1,159 @@
+/* EditorJS Custom Styles */
+
+.codex-editor__redactor {
+  padding-bottom: 300px !important;
+}
+
+.ce-block__content,
+.ce-toolbar__content {
+  max-width: 100% !important;
+}
+
+.ce-toolbar__plus,
+.ce-toolbar__settings-btn {
+  color: #333;
+}
+
+.ce-toolbar__plus:hover,
+.ce-toolbar__settings-btn:hover {
+  background-color: #f0f0f0;
+}
+
+.ce-block--selected .ce-block__content {
+  background-color: #e8f4ff;
+}
+
+.ce-inline-toolbar {
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.ce-inline-tool {
+  color: #333;
+}
+
+.ce-inline-tool:hover {
+  background-color: #f0f0f0;
+}
+
+.ce-conversion-tool__icon {
+  background-color: #f0f0f0;
+  border-radius: 4px;
+}
+
+.ce-settings {
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Header styles */
+.ce-header {
+  padding: 0.6em 0;
+}
+
+/* Paragraph styles */
+.ce-paragraph {
+  line-height: 1.6em;
+}
+
+/* List styles */
+.cdx-list {
+  padding-left: 20px;
+}
+
+.cdx-list__item {
+  padding: 5px 0;
+  line-height: 1.6em;
+}
+
+/* Quote styles */
+.cdx-quote {
+  border-left: 4px solid #e0e0e0;
+  padding-left: 16px;
+  font-style: italic;
+}
+
+.cdx-quote__text {
+  min-height: 30px;
+}
+
+.cdx-quote__caption {
+  margin-top: 10px;
+  font-size: 0.9em;
+  color: #666;
+}
+
+/* Table styles */
+.tc-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tc-table__cell {
+  border: 1px solid #e0e0e0;
+  padding: 8px;
+}
+
+/* Image styles */
+.image-tool__image {
+  max-width: 100%;
+  border-radius: 4px;
+}
+
+.image-tool__caption {
+  margin-top: 8px;
+  text-align: center;
+  font-size: 0.9em;
+  color: #666;
+}
+
+/* Link styles */
+.link-tool__content {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
+.link-tool__image {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  margin-right: 10px;
+  border-radius: 4px;
+}
+
+.link-tool__title {
+  font-weight: 600;
+  font-size: 1em;
+  margin-bottom: 4px;
+}
+
+.link-tool__description {
+  font-size: 0.9em;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.link-tool__anchor {
+  font-size: 0.8em;
+  color: #999;
+}
+
+/* Marker (highlight) styles */
+mark {
+  background-color: #fff176;
+  padding: 0 2px;
+}
+
+/* Code styles */
+code.inline-code {
+  background-color: #f0f0f0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.9em;
+}

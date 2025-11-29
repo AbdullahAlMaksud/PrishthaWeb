@@ -1,0 +1,22 @@
+# Vercel deployment
+
+.vercel
+
+# Environment
+
+.env\*.local
+.env.production
+
+# Build output
+
+.next/
+out/
+
+# Dependencies
+
+node_modules/
+
+# Development
+
+.turbo/
+.eslintcache
