@@ -19,9 +19,15 @@ import {
   Volume2,
   VolumeX,
   Printer,
+  Save,
 } from "lucide-react";
 
-export const SimpleTextEditor: React.FC = () => {
+export interface SimpleTextEditorProps {
+  fileId?: string | null;
+  onFileSaved?: (id: string) => void;
+}
+
+export const SimpleTextEditor: React.FC<SimpleTextEditorProps> = ({ fileId, onFileSaved }) => {
   const [title, setTitle] = useState(() => {
     if (typeof window !== "undefined") {
       return loadSimpleEditor().title;
@@ -48,10 +54,19 @@ export const SimpleTextEditor: React.FC = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       saveSimpleEditor({ title, description });
+      // If we have an active file ID, also update the file record
+      if (fileId) {
+        // We only auto-update the file record if we want auto-save to persist to the file list too. 
+        // For now, let's keep explicit "Save" for the file list to avoid accidental overwrites of the saved "version" 
+        // vs the "working copy".
+        // actually, modern apps usually auto-save everything.
+        // Let's stick to explicit save for "files" to match user request "save store... access from menu". 
+        // Usually implies a file system feel.
+      }
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [title, description]);
+  }, [title, description, fileId]);
 
   // Save keyboard sound setting
   useEffect(() => {
@@ -66,6 +81,26 @@ export const SimpleTextEditor: React.FC = () => {
       e.preventDefault();
       textareaRef.current?.focus();
     }
+  };
+
+  const handleSave = () => {
+    // Dynamic import to avoid SSR issues if needed, or just use the imported functions
+    // We need to import saveSimpleFile and updateSimpleFile
+    import("@/utils/localStorage").then(({ saveSimpleFile, updateSimpleFile }) => {
+      if (fileId) {
+        updateSimpleFile(fileId, { title, description });
+        alert("File saved!");
+      } else {
+        const name = prompt("Enter file name:", title || "Untitled");
+        if (name) {
+          const newFile = saveSimpleFile(name, { title, description });
+          if (onFileSaved) {
+            onFileSaved(newFile.id);
+          }
+          alert("File saved as new!");
+        }
+      }
+    });
   };
 
   const handlePrint = () => {
@@ -214,6 +249,11 @@ export const SimpleTextEditor: React.FC = () => {
                 )}
                 {/* <span className="text-xs">Sound</span> */}
               </Toggle>
+
+              <Button onClick={handleSave} size="sm" variant={fileId ? "default" : "secondary"}>
+                <Save className="h-4 w-4 mr-1" />
+                {fileId ? "Save" : "Save As"}
+              </Button>
 
               {/* Fullscreen Button */}
               <Button onClick={handleFullscreen} size="sm">

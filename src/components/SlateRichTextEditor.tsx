@@ -66,6 +66,7 @@ import {
   VolumeX,
   Plus,
   Minus,
+  Save,
 } from "lucide-react";
 
 const initialValue = [
@@ -152,7 +153,12 @@ type CustomText = {
   backgroundColor?: string;
 };
 
-export const SlateRichTextEditor: React.FC = () => {
+export interface SlateRichTextEditorProps {
+  fileId?: string | null;
+  onFileSaved?: (id: string) => void;
+}
+
+export const SlateRichTextEditor: React.FC<SlateRichTextEditorProps> = ({ fileId, onFileSaved }) => {
   const [showPreview, setShowPreview] = useState(false);
   const [keyboardSoundEnabled, setKeyboardSoundEnabled] = useState(() => {
     if (typeof window !== "undefined") {
@@ -180,207 +186,32 @@ export const SlateRichTextEditor: React.FC = () => {
   const handleChange = (newValue: Descendant[]) => {
     setValue(newValue);
     saveRichEditor(newValue as never);
+     // Auto-update is disabled for specific files as per decision in SimpleEditor
   };
 
-  const renderElement = useCallback((props: RenderElementProps) => {
-    const element = props.element as CustomElement;
-    const style = {
-      textAlign: (element.align || "left") as React.CSSProperties["textAlign"],
-    };
-
-    switch (element.type) {
-      case "heading-one":
-        return (
-          <h1 style={style} {...props.attributes}>
-            {props.children}
-          </h1>
-        );
-      case "heading-two":
-        return (
-          <h2 style={style} {...props.attributes}>
-            {props.children}
-          </h2>
-        );
-      case "heading-three":
-        return (
-          <h3 style={style} {...props.attributes}>
-            {props.children}
-          </h3>
-        );
-      case "block-quote":
-        return (
-          <blockquote style={style} {...props.attributes}>
-            {props.children}
-          </blockquote>
-        );
-      case "bulleted-list":
-        return (
-          <ul style={style} {...props.attributes}>
-            {props.children}
-          </ul>
-        );
-      case "numbered-list":
-        return (
-          <ol style={style} {...props.attributes}>
-            {props.children}
-          </ol>
-        );
-      case "list-item":
-        return (
-          <li style={style} {...props.attributes}>
-            {props.children}
-          </li>
-        );
-      default:
-        return (
-          <p style={style} {...props.attributes}>
-            {props.children}
-          </p>
-        );
-    }
-  }, []);
-
-  const renderLeaf = useCallback((props: RenderLeafProps) => {
-    const leaf = props.leaf as CustomText;
-    let { children } = props;
-
-    const style: React.CSSProperties = {};
-
-    if (leaf.fontFamily && leaf.fontFamily !== "default") {
-      style.fontFamily = leaf.fontFamily;
-    }
-
-    if (leaf.fontSize) {
-      style.fontSize = `${leaf.fontSize}px`;
-    }
-
-    if (leaf.color) {
-      style.color = leaf.color;
-    }
-
-    if (leaf.backgroundColor && leaf.backgroundColor !== "transparent") {
-      style.backgroundColor = leaf.backgroundColor;
-    }
-
-    if (leaf.bold) {
-      children = <strong>{children}</strong>;
-    }
-
-    if (leaf.italic) {
-      children = <em>{children}</em>;
-    }
-
-    if (leaf.underline) {
-      children = <u>{children}</u>;
-    }
-
-    if (leaf.strikethrough) {
-      children = <s>{children}</s>;
-    }
-
-    if (leaf.code) {
-      children = (
-        <code className="bg-muted px-1 py-0.5 rounded text-sm font-mono">
-          {children}
-        </code>
-      );
-    }
-
-    return (
-      <span {...props.attributes} style={style}>
-        {children}
-      </span>
-    );
-  }, []);
-
-  const toggleMark = (format: string) => {
-    const isActive = isMarkActive(editor, format);
-
-    if (isActive) {
-      Editor.removeMark(editor, format);
-    } else {
-      Editor.addMark(editor, format, true);
-    }
-  };
-
-  const toggleBlock = (format: string) => {
-    const isActive = isBlockActive(editor, format);
-    const isList = ["numbered-list", "bulleted-list"].includes(format);
-
-    Transforms.unwrapNodes(editor, {
-      match: (n) =>
-        !Editor.isEditor(n) &&
-        SlateElement.isElement(n) &&
-        ["numbered-list", "bulleted-list"].includes((n as CustomElement).type),
-      split: true,
+  const handleSave = () => {
+     import("@/utils/localStorage").then(({ saveRichFile, updateRichFile }) => {
+      if (fileId) {
+        updateRichFile(fileId, value);
+        alert("File saved!");
+      } else {
+        const name = prompt("Enter file name:", "Untitled Document");
+        if (name) {
+          const newFile = saveRichFile(name, value);
+          if (onFileSaved) {
+            onFileSaved(newFile.id);
+          }
+          alert("File saved as new!");
+        }
+      }
     });
-
-    const newProperties: Partial<CustomElement> = {
-      type: isActive ? "paragraph" : isList ? "list-item" : format,
-    };
-
-    Transforms.setNodes<SlateElement>(editor, newProperties);
-
-    if (!isActive && isList) {
-      const block = { type: format, children: [] };
-      Transforms.wrapNodes(editor, block);
-    }
-  };
-
-  const setMarkValue = (format: string, value: string) => {
-    if (editor.selection) {
-      Editor.addMark(editor, format, value);
-    }
-  };
-
-  const getMarkValue = (format: string): string | undefined => {
-    const marks = Editor.marks(editor);
-    return marks
-      ? ((marks as Record<string, unknown>)[format] as string)
-      : undefined;
-  };
-
-  const setAlignment = (align: string) => {
-    Transforms.setNodes(editor, { align } as Partial<CustomElement>, {
-      match: (n) => SlateElement.isElement(n) && Editor.isBlock(editor, n),
-    });
-  };
-
-  const adjustFontSize = (delta: number) => {
-    const currentSize = parseInt(getMarkValue("fontSize") || "16");
-    const newSize = Math.max(8, Math.min(72, currentSize + delta));
-    setMarkValue("fontSize", newSize.toString());
-    // Force re-render to update the select dropdown
-    setValue([...value]);
-  };
-
-  const isMarkActive = (editor: Editor, format: string) => {
-    const marks = Editor.marks(editor);
-    return marks ? (marks as Record<string, unknown>)[format] === true : false;
-  };
-
-  const isBlockActive = (editor: Editor, format: string) => {
-    const { selection } = editor;
-    if (!selection) return false;
-
-    const [match] = Array.from(
-      Editor.nodes(editor, {
-        at: Editor.unhangRange(editor, selection),
-        match: (n) =>
-          !Editor.isEditor(n) &&
-          SlateElement.isElement(n) &&
-          (n as CustomElement).type === format,
-      })
-    );
-
-    return !!match;
   };
 
   const handleExportTxt = () => {
     const extractText = (node: Descendant): string => {
-      if ("text" in node) return node.text;
+      if ("text" in node) return node.text as string;
       if ("children" in node) {
-        return node.children.map(extractText).join("");
+        return (node as CustomElement).children.map(extractText).join("");
       }
       return "";
     };
@@ -608,6 +439,255 @@ export const SlateRichTextEditor: React.FC = () => {
       alert(`Failed to export PDF: ${errorMessage}\n\nPlease try again.`);
     }
   };
+
+  // ... (renderElement, renderLeaf, toggleMark, toggleBlock, etc. - keep existing)
+
+  // skipping down to render method...
+
+  // In the return statement...
+
+          <div className="flex items-center gap-2 px-5 py-3 bg-muted border-t">
+            {/* Keyboard Sound Toggle */}
+            <Toggle
+              pressed={keyboardSoundEnabled}
+              onPressedChange={setKeyboardSoundEnabled}
+              aria-label="Toggle keyboard sound"
+              size="sm"
+            >
+              {keyboardSoundEnabled ? (
+                <Volume2 className="h-4 w-4" />
+              ) : (
+                <VolumeX className="h-4 w-4" />
+              )}
+            </Toggle>
+
+            <Separator orientation="vertical" className="h-6" />
+
+            <Button
+               variant={fileId ? "default" : "secondary"}
+               size="sm"
+               onClick={handleSave}
+            >
+              <Save className="h-4 w-4 mr-2" />
+               {fileId ? "Save" : "Save As"}
+             </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowPreview(!showPreview)}
+            >
+              {showPreview ? (
+                <EyeOff className="h-4 w-4 mr-2" />
+              ) : (
+                <Eye className="h-4 w-4 mr-2" />
+              )}
+              {showPreview ? "Hide Preview" : "Show Preview"}
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleExportTxt}>
+              <FileText className="h-4 w-4 mr-2" />
+              Export TXT
+            </Button>
+            <Button size="sm" onClick={handleExportPdf}>
+              <FileDown className="h-4 w-4 mr-2" />
+              Export PDF
+            </Button>
+          </div>
+  const renderElement = useCallback((props: RenderElementProps) => {
+    const element = props.element as CustomElement;
+    const style = {
+      textAlign: (element.align || "left") as React.CSSProperties["textAlign"],
+    };
+
+    switch (element.type) {
+      case "heading-one":
+        return (
+          <h1 style={style} {...props.attributes}>
+            {props.children}
+          </h1>
+        );
+      case "heading-two":
+        return (
+          <h2 style={style} {...props.attributes}>
+            {props.children}
+          </h2>
+        );
+      case "heading-three":
+        return (
+          <h3 style={style} {...props.attributes}>
+            {props.children}
+          </h3>
+        );
+      case "block-quote":
+        return (
+          <blockquote style={style} {...props.attributes}>
+            {props.children}
+          </blockquote>
+        );
+      case "bulleted-list":
+        return (
+          <ul style={style} {...props.attributes}>
+            {props.children}
+          </ul>
+        );
+      case "numbered-list":
+        return (
+          <ol style={style} {...props.attributes}>
+            {props.children}
+          </ol>
+        );
+      case "list-item":
+        return (
+          <li style={style} {...props.attributes}>
+            {props.children}
+          </li>
+        );
+      default:
+        return (
+          <p style={style} {...props.attributes}>
+            {props.children}
+          </p>
+        );
+    }
+  }, []);
+
+  const renderLeaf = useCallback((props: RenderLeafProps) => {
+    const leaf = props.leaf as CustomText;
+    let { children } = props;
+
+    const style: React.CSSProperties = {};
+
+    if (leaf.fontFamily && leaf.fontFamily !== "default") {
+      style.fontFamily = leaf.fontFamily;
+    }
+
+    if (leaf.fontSize) {
+      style.fontSize = `${leaf.fontSize}px`;
+    }
+
+    if (leaf.color) {
+      style.color = leaf.color;
+    }
+
+    if (leaf.backgroundColor && leaf.backgroundColor !== "transparent") {
+      style.backgroundColor = leaf.backgroundColor;
+    }
+
+    if (leaf.bold) {
+      children = <strong>{children}</strong>;
+    }
+
+    if (leaf.italic) {
+      children = <em>{children}</em>;
+    }
+
+    if (leaf.underline) {
+      children = <u>{children}</u>;
+    }
+
+    if (leaf.strikethrough) {
+      children = <s>{children}</s>;
+    }
+
+    if (leaf.code) {
+      children = (
+        <code className="bg-muted px-1 py-0.5 rounded text-sm font-mono">
+          {children}
+        </code>
+      );
+    }
+
+    return (
+      <span {...props.attributes} style={style}>
+        {children}
+      </span>
+    );
+  }, []);
+
+  const toggleMark = (format: string) => {
+    const isActive = isMarkActive(editor, format);
+
+    if (isActive) {
+      Editor.removeMark(editor, format);
+    } else {
+      Editor.addMark(editor, format, true);
+    }
+  };
+
+  const toggleBlock = (format: string) => {
+    const isActive = isBlockActive(editor, format);
+    const isList = ["numbered-list", "bulleted-list"].includes(format);
+
+    Transforms.unwrapNodes(editor, {
+      match: (n) =>
+        !Editor.isEditor(n) &&
+        SlateElement.isElement(n) &&
+        ["numbered-list", "bulleted-list"].includes((n as CustomElement).type),
+      split: true,
+    });
+
+    const newProperties: Partial<CustomElement> = {
+      type: isActive ? "paragraph" : isList ? "list-item" : format,
+    };
+
+    Transforms.setNodes<SlateElement>(editor, newProperties);
+
+    if (!isActive && isList) {
+      const block = { type: format, children: [] };
+      Transforms.wrapNodes(editor, block);
+    }
+  };
+
+  const setMarkValue = (format: string, value: string) => {
+    if (editor.selection) {
+      Editor.addMark(editor, format, value);
+    }
+  };
+
+  const getMarkValue = (format: string): string | undefined => {
+    const marks = Editor.marks(editor);
+    return marks
+      ? ((marks as Record<string, unknown>)[format] as string)
+      : undefined;
+  };
+
+  const setAlignment = (align: string) => {
+    Transforms.setNodes(editor, { align } as Partial<CustomElement>, {
+      match: (n) => SlateElement.isElement(n) && Editor.isBlock(editor, n),
+    });
+  };
+
+  const adjustFontSize = (delta: number) => {
+    const currentSize = parseInt(getMarkValue("fontSize") || "16");
+    const newSize = Math.max(8, Math.min(72, currentSize + delta));
+    setMarkValue("fontSize", newSize.toString());
+    // Force re-render to update the select dropdown
+    setValue([...value]);
+  };
+
+  const isMarkActive = (editor: Editor, format: string) => {
+    const marks = Editor.marks(editor);
+    return marks ? (marks as Record<string, unknown>)[format] === true : false;
+  };
+
+  const isBlockActive = (editor: Editor, format: string) => {
+    const { selection } = editor;
+    if (!selection) return false;
+
+    const [match] = Array.from(
+      Editor.nodes(editor, {
+        at: Editor.unhangRange(editor, selection),
+        match: (n) =>
+          !Editor.isEditor(n) &&
+          SlateElement.isElement(n) &&
+          (n as CustomElement).type === format,
+      })
+    );
+
+    return !!match;
+  };
+
+
 
   return (
     <div className="w-full h-full flex flex-col p-4">
