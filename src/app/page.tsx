@@ -1,15 +1,19 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { SimpleTextEditor } from "@/features/plain-text-editor/simple-text-editor";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft } from "lucide-react";
 import { FileSidebar } from "@/components/common/file-sidebar";
-import { listSimpleFiles, listRichFiles } from "@/shared/lib/local-storage";
+import { 
+  listSimpleFiles, 
+  listRichFiles, 
+  loadKeyboardSoundSetting, 
+  saveKeyboardSoundSetting 
+} from "@/shared/lib/local-storage";
 import { Navbar } from "@/components/common/navbar";
-import { Footer } from "@/components/common/footer";
 
 const SlateRichTextEditor = dynamic(
   () =>
@@ -19,9 +23,21 @@ const SlateRichTextEditor = dynamic(
   { ssr: false }
 );
 
+interface IEditorActions {
+  save?: () => void;
+  downloadTxt?: () => void;
+  downloadPdf?: () => void;
+  print?: () => void;
+  togglePreview?: () => void;
+  showPreview?: boolean;
+}
+
 export default function Home() {
   const [currentSimpleFileId, setCurrentSimpleFileId] = useState<string | null>(null);
   const [currentRichFileId, setCurrentRichFileId] = useState<string | null>(null);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("simple");
+  const [triggerVal, setTriggerVal] = useState(0); // Forces re-render of floating navbar action status
   
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     if (typeof window !== "undefined") {
@@ -34,6 +50,13 @@ export default function Home() {
     return "light";
   });
 
+  const [keyboardSoundEnabled, setKeyboardSoundEnabled] = useState(() => {
+    if (typeof window !== "undefined") {
+      return loadKeyboardSoundSetting();
+    }
+    return false;
+  });
+
   const toggleTheme = () => {
     const newTheme = theme === "light" ? "dark" : "light";
     setTheme(newTheme);
@@ -41,9 +64,19 @@ export default function Home() {
     document.documentElement.classList.toggle("dark", newTheme === "dark");
   };
 
-  const [isPanelOpen, setIsPanelOpen] = useState(true);
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("simple");
+  const handleToggleSound = (enabled: boolean) => {
+    setKeyboardSoundEnabled(enabled);
+    saveKeyboardSoundSetting(enabled);
+  };
+
+  // Ref to hold the active editor actions
+  const editorActionsRef = useRef<IEditorActions>({});
+
+  // Reset actions when active tab changes
+  useEffect(() => {
+    editorActionsRef.current = {};
+    setTriggerVal((v) => v + 1);
+  }, [activeTab]);
 
   const handleSelectFile = (id: string, type: "simple" | "rich") => {
     if (type === "simple") {
@@ -73,7 +106,7 @@ export default function Home() {
       setCurrentSimpleFileId(null);
       setActiveTab("simple");
     } else {
-      const initial = [{ type: "paragraph", children: [{ text: "Start writing your content here..." }] }];
+      const initial = [{ type: "paragraph", children: [{ text: "" }] }];
       localStorage.setItem("richEditor", JSON.stringify(initial));
       setCurrentRichFileId(null);
       setActiveTab("rich");
@@ -82,46 +115,61 @@ export default function Home() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-linear-to-br from-background to-muted">
-      <main className="flex-1 overflow-hidden">
+    <div className="h-screen w-screen flex flex-col bg-background text-foreground overflow-hidden relative">
+      <main className="flex-1 overflow-hidden relative">
         <Tabs
           value={activeTab}
           onValueChange={setActiveTab}
-          className="h-full relative"
+          className="h-full w-full relative"
         >
+          {/* Unified Floating Navbar */}
           <Navbar
             activeTab={activeTab}
             setActiveTab={setActiveTab}
-            isPanelOpen={isPanelOpen}
-            setIsPanelOpen={setIsPanelOpen}
             isSheetOpen={isSheetOpen}
             setIsSheetOpen={setIsSheetOpen}
             theme={theme}
             toggleTheme={toggleTheme}
+            keyboardSoundEnabled={keyboardSoundEnabled}
+            setKeyboardSoundEnabled={handleToggleSound}
+            onNewFile={handleNewFile}
+            onSave={() => editorActionsRef.current.save?.()}
+            onDownloadTxt={() => editorActionsRef.current.downloadTxt?.()}
+            onDownloadPdf={() => editorActionsRef.current.downloadPdf?.()}
+            onPrint={() => editorActionsRef.current.print?.()}
+            onTogglePreview={() => {
+              editorActionsRef.current.togglePreview?.();
+              setTriggerVal((v) => v + 1);
+            }}
+            showPreview={editorActionsRef.current.showPreview}
           />
 
-          <TabsContent value="simple" className="h-full w-full">
+          <TabsContent value="simple" className="h-full w-full outline-none data-[state=inactive]:hidden">
             <SimpleTextEditor 
               key={currentSimpleFileId || "new"} 
               fileId={currentSimpleFileId}
               onFileSaved={setCurrentSimpleFileId}
+              actionsRef={editorActionsRef}
+              keyboardSoundEnabled={keyboardSoundEnabled}
             />
           </TabsContent>
 
-          <TabsContent value="rich" className="h-full">
+          <TabsContent value="rich" className="h-full w-full outline-none data-[state=inactive]:hidden">
             <SlateRichTextEditor 
               key={currentRichFileId || "new"}
               fileId={currentRichFileId}
               onFileSaved={setCurrentRichFileId}
+              actionsRef={editorActionsRef}
+              keyboardSoundEnabled={keyboardSoundEnabled}
             />
           </TabsContent>
         </Tabs>
       </main>
 
-      {/* Right side sheet / drawer */}
+      {/* Right side sheet / drawer for file list */}
       <div
         aria-hidden={!isSheetOpen}
-        className={`fixed inset-0 bg-black/40 z-40 transition-opacity duration-200 ${
+        className={`fixed inset-0 bg-black/40 dark:bg-black/60 z-40 transition-opacity duration-200 ${
           isSheetOpen
             ? "opacity-100 pointer-events-auto"
             : "opacity-0 pointer-events-none"
@@ -137,15 +185,15 @@ export default function Home() {
         } w-72 md:w-96 border-l`}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b">
-          <div className="font-semibold">My Files</div>
+          <div className="font-semibold text-foreground">My Files</div>
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setIsSheetOpen(false)}
             aria-label="Close menu"
-            className="cursor-pointer"
+            className="cursor-pointer hover:bg-muted"
           >
-            <ChevronLeft className="rotate-180 h-4 w-4" />
+            <ChevronLeft className="rotate-180 h-4 w-4 text-foreground" />
           </Button>
         </div>
         <div className="h-[calc(100%-60px)]">
@@ -157,8 +205,6 @@ export default function Home() {
            />
         </div>
       </aside>
-
-      <Footer />
     </div>
   );
 }

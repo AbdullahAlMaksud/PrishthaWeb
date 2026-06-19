@@ -4,32 +4,24 @@ import React, { useMemo, useState, useEffect } from "react";
 import { createEditor, Descendant } from "slate";
 import { Slate, Editable, withReact } from "slate-react";
 import { withHistory } from "slate-history";
-import { Button } from "@/components/ui/button";
-import { Toggle } from "@/components/ui/toggle";
-import { Separator } from "@/components/ui/separator";
 import {
   saveRichEditor,
   loadRichEditor,
-  saveKeyboardSoundSetting,
-  loadKeyboardSoundSetting,
 } from "@/shared/lib/local-storage";
 import { useKeyboardSound } from "@/shared/hooks/use-keyboard-sound";
-import { Eye, EyeOff, FileText, FileDown, Volume2, VolumeX, Save } from "lucide-react";
 import { INITIAL_VALUE } from "./slate-constants";
 import { exportToTxt, exportToPdf } from "./slate-export";
 import { renderSlateElement, renderSlateLeaf } from "./slate-renderers";
 import { SlateToolbar } from "./slate-toolbar";
 import { ISlateRichTextEditorProps } from "./slate-editor";
 
-export const SlateRichTextEditor: React.FC<ISlateRichTextEditorProps> = ({ fileId, onFileSaved }) => {
+export const SlateRichTextEditor: React.FC<ISlateRichTextEditorProps> = ({ 
+  fileId, 
+  onFileSaved, 
+  actionsRef, 
+  keyboardSoundEnabled 
+}) => {
   const [showPreview, setShowPreview] = useState(false);
-  const [keyboardSoundEnabled, setKeyboardSoundEnabled] = useState(() => {
-    if (typeof window !== "undefined") {
-      return loadKeyboardSoundSetting();
-    }
-    return false;
-  });
-
   const editor = useMemo(() => withHistory(withReact(createEditor())), []);
   const previewEditor = useMemo(() => withReact(createEditor()), []);
 
@@ -40,11 +32,6 @@ export const SlateRichTextEditor: React.FC<ISlateRichTextEditorProps> = ({ fileI
 
   // Enable keyboard sound
   useKeyboardSound(keyboardSoundEnabled, undefined, true);
-
-  // Save keyboard sound setting
-  useEffect(() => {
-    saveKeyboardSoundSetting(keyboardSoundEnabled);
-  }, [keyboardSoundEnabled]);
 
   const handleChange = (newValue: Descendant[]) => {
     setValue(newValue);
@@ -59,7 +46,7 @@ export const SlateRichTextEditor: React.FC<ISlateRichTextEditorProps> = ({ fileI
     import("@/shared/lib/local-storage").then(({ saveRichFile, updateRichFile }) => {
       if (fileId) {
         updateRichFile(fileId, value);
-        alert("File saved!");
+        alert("File saved successfully!");
       } else {
         const name = prompt("Enter file name:", "Untitled Document");
         if (name) {
@@ -73,67 +60,67 @@ export const SlateRichTextEditor: React.FC<ISlateRichTextEditorProps> = ({ fileI
     });
   };
 
-  return (
-    <div className="w-full h-full flex flex-col p-4">
-      {/* Toolbar */}
-      <SlateToolbar editor={editor} triggerReRender={triggerReRender} />
+  // Expose actions to parent component
+  useEffect(() => {
+    if (actionsRef) {
+      actionsRef.current = {
+        save: handleSave,
+        downloadTxt: () => exportToTxt(value),
+        downloadPdf: () => exportToPdf(value),
+        togglePreview: () => setShowPreview((prev) => !prev),
+        showPreview: showPreview,
+      };
+    }
+  }, [value, fileId, showPreview, actionsRef]);
 
-      {/* Editor and Preview */}
-      <div className={`flex-1 grid ${showPreview ? "grid-cols-2 gap-4" : "grid-cols-1"} overflow-hidden`}>
-        {/* Editor */}
-        <div className="border rounded-b-xl bg-background flex flex-col overflow-hidden">
-          <div id="slate-export" className="flex-1 overflow-y-auto mb-4 p-8">
+  return (
+    <div className="w-full min-h-screen bg-background overflow-y-auto px-6 md:px-12 py-24">
+      <div className={`${showPreview ? "max-w-7xl" : "max-w-4xl"} mx-auto w-full flex flex-col`}>
+        {/* Formatting Toolbar */}
+        <div className="mb-6 sticky top-20 z-10 bg-background/95 backdrop-blur-sm pb-2 border-b border-border/40">
+          <SlateToolbar editor={editor} triggerReRender={triggerReRender} />
+        </div>
+
+        {/* Writing Canvas / Preview Grid */}
+        <div className={`grid ${showPreview ? "grid-cols-1 md:grid-cols-2 gap-12 divide-y md:divide-y-0 md:divide-x divide-border" : "grid-cols-1"}`}>
+          {/* Editor Column */}
+          <div id="slate-export" className="min-h-[500px] flex flex-col">
             <Slate editor={editor} initialValue={value} onChange={handleChange}>
               <Editable
                 renderElement={renderSlateElement}
                 renderLeaf={renderSlateLeaf}
                 placeholder="Start writing your content..."
-                className="prose prose-sm max-w-none focus:outline-none h-full"
+                className="prose dark:prose-invert max-w-none focus:outline-none min-h-[500px] text-lg text-foreground leading-relaxed"
                 spellCheck
                 autoFocus
               />
             </Slate>
           </div>
 
-          <div className="flex items-center gap-2 px-5 py-3 bg-muted border-t">
-            <Toggle
-              variant="outline"
-              pressed={keyboardSoundEnabled}
-              onPressedChange={setKeyboardSoundEnabled}
-              aria-label="Toggle keyboard sound"
-              size="sm"
-            >
-              {keyboardSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-            </Toggle>
-
-            <Button variant={fileId ? "default" : "secondary"} size="sm" onClick={handleSave}>
-              <Save className="h-4 w-4 mr-1" />
-              {fileId ? "Save" : "Save As"}
-            </Button>
-
-            <Button variant={showPreview ? "default" : "secondary"} size="sm" onClick={() => setShowPreview(!showPreview)}>
-              {showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => exportToTxt(value)}>
-              <FileText className="h-4 w-4" />
-            </Button>
-            <Button size="sm" onClick={() => exportToPdf(value)}>
-              <FileDown className="h-4 w-4" />
-            </Button>
-          </div>
+          {/* Preview Column */}
+          {showPreview && (
+            <div id="slate-preview" className="md:pl-12 pt-8 md:pt-0 overflow-y-auto flex flex-col">
+              <h3 className="text-xl font-bold mb-6 text-foreground border-b pb-2 uppercase tracking-wide text-xs text-muted-foreground">
+                Document Live Preview
+              </h3>
+              <div className="prose dark:prose-invert max-w-none text-foreground leading-relaxed">
+                <Slate editor={previewEditor} initialValue={value}>
+                  <Editable renderElement={renderSlateElement} renderLeaf={renderSlateLeaf} readOnly />
+                </Slate>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Preview */}
-        {showPreview && (
-          <div id="slate-preview" className="border rounded-lg p-6 bg-muted/30 overflow-y-auto flex flex-col">
-            <h3 className="text-lg font-semibold mb-4">Preview</h3>
-            <div className="prose prose-sm max-w-none">
-              <Slate editor={previewEditor} initialValue={value}>
-                <Editable renderElement={renderSlateElement} renderLeaf={renderSlateLeaf} readOnly />
-              </Slate>
-            </div>
+        {/* Footer Stats */}
+        <div className="flex items-center justify-between border-t pt-4 mt-12 text-sm text-muted-foreground">
+          <div>
+            {fileId ? "Saved locally" : "Draft"}
           </div>
-        )}
+          <div className="text-xs uppercase tracking-wider">
+            Rich Document
+          </div>
+        </div>
       </div>
     </div>
   );

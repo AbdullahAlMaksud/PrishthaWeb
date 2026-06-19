@@ -54,7 +54,7 @@ export const SlateToolbar: React.FC<ISlateToolbarProps> = ({
   };
 
   return (
-    <div className="flex flex-wrap border-b-0 border items-center gap-2 p-3 rounded-t-xl bg-muted/50">
+    <div className="flex flex-wrap items-center gap-1.5 py-3 px-0 bg-transparent border-0">
       {/* Font Family and Font Size */}
       <SlateFontControls editor={editor} triggerReRender={triggerReRender} />
 

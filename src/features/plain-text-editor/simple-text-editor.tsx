@@ -4,27 +4,19 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   saveSimpleEditor,
   loadSimpleEditor,
-  saveKeyboardSoundSetting,
-  loadKeyboardSoundSetting,
 } from "@/shared/lib/local-storage";
 import { useKeyboardSound } from "@/shared/hooks/use-keyboard-sound";
-import { Button } from "@/components/ui/button";
-import { Toggle } from "@/components/ui/toggle";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Maximize,
-  Minimize,
-  Download,
-  Volume2,
-  VolumeX,
-  Printer,
-  Save,
-} from "lucide-react";
 import { printSimpleDocument, downloadSimpleDocumentTxt } from "./simple-editor-export";
 import { ISimpleTextEditorProps } from "./simple-editor";
 
-export const SimpleTextEditor: React.FC<ISimpleTextEditorProps> = ({ fileId, onFileSaved }) => {
+export const SimpleTextEditor: React.FC<ISimpleTextEditorProps> = ({ 
+  fileId, 
+  onFileSaved, 
+  actionsRef, 
+  keyboardSoundEnabled 
+}) => {
   const [title, setTitle] = useState(() => {
     if (typeof window !== "undefined") {
       return loadSimpleEditor().title;
@@ -37,13 +29,6 @@ export const SimpleTextEditor: React.FC<ISimpleTextEditorProps> = ({ fileId, onF
     }
     return "";
   });
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [keyboardSoundEnabled, setKeyboardSoundEnabled] = useState(() => {
-    if (typeof window !== "undefined") {
-      return loadKeyboardSoundSetting();
-    }
-    return false;
-  });
   const editorRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -55,11 +40,6 @@ export const SimpleTextEditor: React.FC<ISimpleTextEditorProps> = ({ fileId, onF
 
     return () => clearTimeout(timer);
   }, [title, description]);
-
-  // Save keyboard sound setting
-  useEffect(() => {
-    saveKeyboardSoundSetting(keyboardSoundEnabled);
-  }, [keyboardSoundEnabled]);
 
   // Enable keyboard sound
   useKeyboardSound(keyboardSoundEnabled, editorRef);
@@ -75,7 +55,7 @@ export const SimpleTextEditor: React.FC<ISimpleTextEditorProps> = ({ fileId, onF
     import("@/shared/lib/local-storage").then(({ saveSimpleFile, updateSimpleFile }) => {
       if (fileId) {
         updateSimpleFile(fileId, { title, description });
-        alert("File saved!");
+        alert("File saved successfully!");
       } else {
         const name = prompt("Enter file name:", title || "Untitled");
         if (name) {
@@ -89,100 +69,64 @@ export const SimpleTextEditor: React.FC<ISimpleTextEditorProps> = ({ fileId, onF
     });
   };
 
-  const handleFullscreen = () => {
-    if (!editorRef.current) return;
+  // Expose actions to parent component
+  useEffect(() => {
+    if (actionsRef) {
+      actionsRef.current = {
+        save: handleSave,
+        downloadTxt: () => downloadSimpleDocumentTxt(title, description),
+        print: () => printSimpleDocument(title, description),
+      };
+    }
+  }, [title, description, fileId, actionsRef]);
 
-    if (!document.fullscreenElement) {
-      editorRef.current.requestFullscreen().catch((err) => {
-        console.error("Error attempting to enable fullscreen:", err);
-      });
-      setIsFullscreen(true);
-    } else {
-      document.exitFullscreen();
-      setIsFullscreen(false);
+  // Dynamic height adjustment for textarea to prevent double scrollbars
+  const adjustHeight = () => {
+    const tx = textareaRef.current;
+    if (tx) {
+      tx.style.height = "auto";
+      tx.style.height = tx.scrollHeight + "px";
     }
   };
 
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () =>
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
-  }, []);
+    adjustHeight();
+  }, [description]);
 
   return (
     <div
       ref={editorRef}
-      className={`w-full h-full flex items-center justify-center ${
-        isFullscreen ? "bg-background p-8" : "p-4"
-      }`}
+      className="w-full min-h-screen bg-background overflow-y-auto px-6 md:px-12 py-24"
     >
-      <div className="w-full h-full flex flex-col">
-        <div className="flex-1 flex flex-col border rounded-2xl overflow-hidden bg-background shadow-lg">
-          <Input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onKeyDown={handleTitleKeyDown}
-            placeholder="Enter your title..."
-            className="border-0 rounded-none focus-visible:ring-0 h-16 text-xl font-bold px-5"
-          />
+      <div className="max-w-4xl mx-auto w-full flex flex-col min-h-full">
+        <Input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          onKeyDown={handleTitleKeyDown}
+          placeholder="Enter your title..."
+          className="border-0 rounded-none focus-visible:ring-0 text-4xl font-extrabold px-0 mb-6 bg-transparent outline-none shadow-none text-foreground"
+        />
 
-          <Textarea
-            ref={textareaRef}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Write your content here..."
-            className="flex-1 border-0 rounded-none focus-visible:ring-0 resize-none text-xl px-5 py-4 h-0"
-          />
+        <Textarea
+          ref={textareaRef}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Write your content here..."
+          className="flex-1 border-0 rounded-none focus-visible:ring-0 resize-none text-lg px-0 py-2 bg-transparent outline-none shadow-none text-foreground leading-relaxed min-h-[400px] overflow-hidden"
+        />
 
-          <div className="flex items-center justify-between bg-muted px-5 py-3 border-t">
-            <div className="flex items-center gap-2">
-              <Toggle
-                variant="outline"
-                pressed={keyboardSoundEnabled}
-                onPressedChange={setKeyboardSoundEnabled}
-                aria-label="Toggle keyboard sound"
-                size="sm"
-              >
-                {keyboardSoundEnabled ? (
-                  <Volume2 className="h-4 w-4" />
-                ) : (
-                  <VolumeX className="h-4 w-4" />
-                )}
-              </Toggle>
-
-              <Button onClick={handleSave} size="sm" variant={fileId ? "default" : "secondary"}>
-                <Save className="h-4 w-4 mr-1" />
-                {fileId ? "Save" : "Save As"}
-              </Button>
-
-              <Button onClick={handleFullscreen} size="sm">
-                {isFullscreen ? (
-                  <Minimize className="h-4 w-4" />
-                ) : (
-                  <Maximize className="h-4 w-4" />
-                )}
-              </Button>
-
-              <Button onClick={() => printSimpleDocument(title, description)} size="sm" variant="outline">
-                <Printer className="h-4 w-4" />
-              </Button>
-
-              <Button onClick={() => downloadSimpleDocumentTxt(title, description)} size="sm">
-                <Download className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="text-sm text-muted-foreground flex items-center gap-3">
-              <span>Characters: {description.length}</span>
-              <span>•</span>
-              <span>
-                Words: {description.trim().split(/\s+/).filter(Boolean).length}
-              </span>
-            </div>
+        {/* Minimal info at bottom */}
+        <div className="flex items-center justify-between border-t pt-4 mt-12 text-sm text-muted-foreground">
+          <div className="flex gap-4">
+            <span>Characters: {description.length}</span>
+            <span>•</span>
+            <span>
+              Words: {description.trim().split(/\s+/).filter(Boolean).length}
+            </span>
+          </div>
+          <div className="text-xs uppercase tracking-wider">
+            {fileId ? "Saved locally" : "Draft"}
           </div>
         </div>
       </div>

@@ -1,3 +1,14 @@
+import React from "react";
+
+export interface IEditorActions {
+  save?: () => void;
+  downloadTxt?: () => void;
+  downloadPdf?: () => void;
+  print?: () => void;
+  togglePreview?: () => void;
+  showPreview?: boolean;
+}
+
 export type CustomText = {
   text: string;
   bold?: boolean;
@@ -20,4 +31,6 @@ export type CustomElement = {
 export interface ISlateRichTextEditorProps {
   fileId?: string | null;
   onFileSaved?: (id: string) => void;
+  actionsRef?: React.MutableRefObject<IEditorActions>;
+  keyboardSoundEnabled: boolean;
 }
