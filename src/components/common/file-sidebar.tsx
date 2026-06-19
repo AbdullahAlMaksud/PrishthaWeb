@@ -5,7 +5,7 @@ import {
   deleteSimpleFile,
   deleteRichFile,
   SavedFile,
-} from "@/utils/localStorage";
+} from "@/shared/lib/local-storage";
 import { Button } from "@/components/ui/button";
 import { FileText, Trash2, Plus, PenTool } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -23,17 +23,16 @@ import {
 } from "@/components/ui/alert-dialog";
 import { formatDistanceToNow } from "date-fns";
 
-interface FileSidebarProps {
+export interface IFileSidebarProps {
   onSelectFile: (id: string, type: "simple" | "rich") => void;
   onNewFile: (type: "simple" | "rich") => void;
   isOpen: boolean;
   currentFileId: string | null;
 }
 
-export const FileSidebar: React.FC<FileSidebarProps> = ({
+export const FileSidebar: React.FC<IFileSidebarProps> = ({
   onSelectFile,
   onNewFile,
-  isOpen,
   currentFileId,
 }) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -51,11 +50,7 @@ export const FileSidebar: React.FC<FileSidebarProps> = ({
 
   useEffect(() => {
     refreshFiles();
-    // Set up an interval or listener to refresh files if needed, 
-    // but for now, we rely on parent causing re-renders or manual refresh if we want.
-    // Ideally, we'd have a custom event or context. 
-    // Let's just refresh every time sidebar opens or activeTab changes.
-    const interval = setInterval(refreshFiles, 2000); // Polling for changes
+    const interval = setInterval(refreshFiles, 2000);
     return () => clearInterval(interval);
   }, []);
 
@@ -67,13 +62,12 @@ export const FileSidebar: React.FC<FileSidebarProps> = ({
       deleteRichFile(id);
       setRichFiles((prev) => prev.filter((f) => f.id !== id));
     }
-    // If deleted file was active, might need to handle that in parent, but this is fine for now
   };
 
   const renderFileList = (files: SavedFile<unknown>[], type: "simple" | "rich") => (
     <div className="space-y-2 p-4">
       <Button
-        className="w-full justify-start gap-2 mb-4"
+        className="w-full justify-start gap-2 mb-4 cursor-pointer"
         onClick={() => onNewFile(type)}
         variant="outline"
       >
@@ -94,7 +88,7 @@ export const FileSidebar: React.FC<FileSidebarProps> = ({
             }`}
           >
             <button
-              className="flex-1 flex flex-col items-start gap-1 min-w-0"
+              className="flex-1 flex flex-col items-start gap-1 min-w-0 cursor-pointer"
               onClick={() => onSelectFile(file.id, type)}
             >
               <div className="font-medium truncate w-full text-left">
@@ -109,7 +103,7 @@ export const FileSidebar: React.FC<FileSidebarProps> = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
+                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10 cursor-pointer"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -122,10 +116,10 @@ export const FileSidebar: React.FC<FileSidebarProps> = ({
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={() => handleDelete(file.id, type)}
-                    className="bg-destructive hover:bg-destructive/90"
+                    className="bg-destructive hover:bg-destructive/90 cursor-pointer"
                   >
                     Delete
                   </AlertDialogAction>
@@ -150,11 +144,11 @@ export const FileSidebar: React.FC<FileSidebarProps> = ({
       >
         <div className="px-4 pt-4">
           <TabsList className="w-full">
-            <TabsTrigger value="simple" className="flex-1">
+            <TabsTrigger value="simple" className="flex-1 cursor-pointer">
               <PenTool className="h-4 w-4 mr-2" />
               Simple
             </TabsTrigger>
-            <TabsTrigger value="rich" className="flex-1">
+            <TabsTrigger value="rich" className="flex-1 cursor-pointer">
               <FileText className="h-4 w-4 mr-2" />
               Rich
             </TabsTrigger>

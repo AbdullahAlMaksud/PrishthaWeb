@@ -63,7 +63,7 @@ export const saveSimpleFile = (name: string, content: SimpleEditorData): SavedFi
 export const updateSimpleFile = (id: string, content: SimpleEditorData): void => {
   if (typeof window === "undefined") return;
   const files = listSimpleFiles();
-  const index = files.findIndex(f => f.id === id);
+  const index = files.findIndex((f) => f.id === id);
   if (index !== -1) {
     files[index] = {
       ...files[index],
@@ -83,7 +83,7 @@ export const listSimpleFiles = (): SavedFile<SimpleEditorData>[] => {
 
 export const deleteSimpleFile = (id: string): void => {
   if (typeof window === "undefined") return;
-  const files = listSimpleFiles().filter(f => f.id !== id);
+  const files = listSimpleFiles().filter((f) => f.id !== id);
   localStorage.setItem("simpleEditor_files", JSON.stringify(files));
 };
 
@@ -130,7 +130,7 @@ export const saveRichFile = (name: string, content: any): SavedFile<any> => {
 export const updateRichFile = (id: string, content: any): void => {
   if (typeof window === "undefined") return;
   const files = listRichFiles();
-  const index = files.findIndex(f => f.id === id);
+  const index = files.findIndex((f) => f.id === id);
   if (index !== -1) {
     files[index] = {
       ...files[index],
@@ -150,7 +150,7 @@ export const listRichFiles = (): SavedFile<any>[] => {
 
 export const deleteRichFile = (id: string): void => {
   if (typeof window === "undefined") return;
-  const files = listRichFiles().filter(f => f.id !== id);
+  const files = listRichFiles().filter((f) => f.id !== id);
   localStorage.setItem("richEditor_files", JSON.stringify(files));
 };
 

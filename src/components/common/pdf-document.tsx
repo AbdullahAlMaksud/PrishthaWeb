@@ -1,21 +1,10 @@
 import React from "react";
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 
-interface PDFDocumentProps {
+export interface IPdfDocumentProps {
   content: string;
   fontFamily: string;
 }
-
-/**
- * React PDF Document Component
- *
- * This component renders a PDF document with the provided markdown content
- * using the selected Bangla font.
- *
- * Note: react-markdown is for browser rendering. For PDF, we parse the markdown
- * manually or use the raw text. For a production app, you'd want to parse
- * markdown and convert to PDF elements (Text, View, etc.)
- */
 
 // Create styles for the PDF document
 const createStyles = (fontFamily: string) =>
@@ -142,7 +131,7 @@ const parseMarkdownToPDF = (
 /**
  * Main PDF Document Component
  */
-const PDFDocument: React.FC<PDFDocumentProps> = ({ content, fontFamily }) => {
+export const PdfDocument: React.FC<IPdfDocumentProps> = ({ content, fontFamily }) => {
   const styles = createStyles(fontFamily);
   const parsedContent = parseMarkdownToPDF(content, styles);
 
@@ -160,5 +149,3 @@ const PDFDocument: React.FC<PDFDocumentProps> = ({ content, fontFamily }) => {
     </Document>
   );
 };
-
-export default PDFDocument;

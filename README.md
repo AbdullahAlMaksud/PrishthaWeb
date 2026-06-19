@@ -1,165 +1,89 @@
-# Simple Text Editor
+# PrishthaWeb
 
-A modern, feature-rich text editor built with Next.js, TypeScript, and Editor.js that supports both simple plain text editing and advanced rich text editing.
+A modern, high-performance web editor built with Next.js, React 19, Tailwind CSS 4, and TypeScript. It supports both plain text editing and block-based rich text editing (powered by Slate.js and Editor.js), client-side PDF export with Bangla font support, keyboard sound typing effects, and localized file persistence.
 
 ## Features
 
-### Simple Text Editor
+### Plain Text Editor
+- 📝 Title and description input fields.
+- 💾 Auto-save integration with local storage.
+- 🔊 Typing sound effect (toggleable) with audio pre-loading.
+- 💾 Instant export as `.txt`.
+- 📊 Character and word counters.
 
-- ✅ Title and description fields
-- ✅ Auto-save to browser localStorage
-- ✅ Fullscreen mode
-- ✅ Keyboard typing sound effect (toggle on/off)
-- ✅ Download as `.txt` file
-- ✅ Character and word count
-- ✅ Persistent storage across sessions
-
-### Rich Text Editor (Editor.js)
-
-- ✅ Advanced block-based editor
-- ✅ Multiple content blocks: Headers, Paragraphs, Lists, Links, Images, Tables, Quotes
-- ✅ Text formatting: Bold, Italic, Marker/Highlight, Underline
-- ✅ Side-by-side preview mode
-- ✅ Export to PDF and TXT
-- ✅ Auto-save to localStorage
-- ✅ Modular and reusable architecture
-
-### General Features
-
-- 🎨 Modern UI with Tailwind CSS
-- 🔄 Tab-based navigation between editors
-- 💾 Separate localStorage for each editor
-- 📱 Responsive design
-- ⚡ Fast and performant
+### Rich Text Editor
+- 💎 Rich block-based text formatting.
+- 🖋️ Supports headings, lists, quotes, tables, and alignment controls.
+- 🎨 Fine-grained text color and background color controls with opacity.
+- 👁️ Live preview panel.
+- 📄 Real-time client-side PDF generation using `@react-pdf/renderer` with support for multiple Bangla fonts.
+- 💾 Local storage auto-saving.
 
 ## Tech Stack
-
 - **Framework:** Next.js 16 (App Router)
-- **Language:** TypeScript
-- **Styling:** Tailwind CSS + shadcn/ui
-- **Rich Text Editor:** Slate.js
-- **UI Components:** shadcn/ui (Radix UI)
-- **Icons:** Lucide React
-- **PDF Generation:** jsPDF + html2canvas
-- **Package Manager:** Yarn
+- **Library:** React 19
+- **Styling:** Tailwind CSS 4
+- **Editors:** Slate.js & Editor.js
+- **PDF Export:** `@react-pdf/renderer`, `jsPDF`, `html2canvas`
+- **Package Manager:** Bun (Mandatory)
 
 ## Project Structure
 
+The project follows a strictly modular layout under the `src` directory to keep files clean and maintainable (max 200 lines per component):
+
 ```
 src/
-├── app/
-│   ├── page.tsx          # Main landing page with editor & preview
-│   ├── layout.tsx        # Root layout
-│   └── globals.css       # Global styles including SimpleMDE styles
-├── components/
-│   └── PDFDocument.tsx   # React PDF Document component
-└── utils/
-    └── pdf.ts            # PDF generation utilities & font registration
-
-public/
-└── fonts/                # Place your Bangla .ttf font files here
-    ├── README.md         # Font installation instructions
-    └── .gitkeep
+├── app/                  # Next.js App Router (pages, layout, globals.css)
+├── components/           # UI and shared components (navbar, footer, sidebar, pdf-document)
+├── features/             # Modular feature components and helpers
+│   ├── plain-text-editor/  # Plain text editor interface and export options
+│   └── rich-text-editor/   # Slate and EditorJS interfaces, toolbars, color/font pickers
+└── shared/               # Reusable hooks, libraries, storage mechanisms, and type declarations
+    ├── hooks/            # Keyboard sounds and custom UI hooks
+    ├── lib/              # PDF helper, utility wrappers, and local storage adapters
+    └── types/            # Global type definitions
 ```
 
 ## Getting Started
 
-### 1. Install Dependencies
-
+### Prerequisites
+Make sure you have [Bun](https://bun.sh/) installed:
 ```bash
-npm install
+bun --version
 ```
 
-### 2. Add Bangla Fonts
+### 1. Install Dependencies
+```bash
+bun install
+```
 
-Place your Bangla font files (.ttf format) in the `/public/fonts/` directory. The application is configured for these fonts:
-
+### 2. Configure Bangla Fonts
+Place your Bangla font files (in `.ttf` format) under `public/fonts/`. The application expects fonts like:
 - `NotoSansBengali-Regular.ttf`
 - `SolaimanLipi.ttf`
 - `Kalpurush.ttf`
 - `AdorshoLipi.ttf`
 - `Nikosh.ttf`
 
-See `/public/fonts/README.md` for download sources.
+Check `public/fonts/README.md` for specific download links and details.
 
-### 3. Run Development Server
-
+### 3. Run the Development Server
 ```bash
-npm run dev
+bun dev
+```
+Open [http://localhost:3000](http://localhost:3000) in your browser to test the application.
+
+## Build and Production
+
+To verify compilation and check for errors:
+```bash
+bun x tsc --noEmit
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to view the application.
-
-## Usage
-
-1. **Write Markdown** - Use the left editor panel to write your markdown content
-2. **Preview** - See the rendered markdown in the right preview panel
-3. **Select Font** - Choose your preferred Bangla font from the dropdown
-4. **Download PDF** - Click "Download as PDF" to generate and download your document
-
-## Customization
-
-### Adding More Fonts
-
-Edit `src/utils/pdf.ts` and add your font to the `BANGLA_FONTS` array:
-
-```typescript
-export const BANGLA_FONTS: BanglaFont[] = [
-  {
-    name: "YourFontName",
-    label: "Display Name for Dropdown",
-    path: "/fonts/YourFontFile.ttf",
-  },
-  // ... other fonts
-];
+To create a production build:
+```bash
+bun run build
 ```
-
-### Modifying Markdown Parser
-
-The PDF markdown parser is in `src/components/PDFDocument.tsx`. You can extend it to support more markdown features:
-
-- Tables
-- Images
-- Custom styling
-- Advanced formatting
-
-### Styling
-
-- Edit `src/app/globals.css` for global styles
-- Modify Tailwind classes in `src/app/page.tsx` for UI changes
-- Adjust PDF styles in `src/components/PDFDocument.tsx`
-
-## Dependencies
-
-```json
-{
-  "react-simplemde-editor": "Markdown editor",
-  "easymde": "SimpleMDE dependency",
-  "react-markdown": "Markdown renderer",
-  "@react-pdf/renderer": "PDF generation",
-  "file-saver": "File download utility"
-}
-```
-
-## Notes
-
-- All PDF generation happens **client-side** - no server API needed
-- Fonts must be in `.ttf` format (not `.otf` or `.woff`)
-- Font files are not included - you must download and add them
-- The markdown parser in PDFDocument.tsx is simplified - extend it for production use
 
 ## License
-
-This project is open source and available under the MIT License.
-
-## Learn More
-
-- [Next.js Documentation](https://nextjs.org/docs)
-- [React PDF Documentation](https://react-pdf.org/)
-- [SimpleMDE Documentation](https://github.com/sparksuite/simplemde-markdown-editor)
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT License

@@ -6,8 +6,8 @@ import {
   loadSimpleEditor,
   saveKeyboardSoundSetting,
   loadKeyboardSoundSetting,
-} from "@/utils/localStorage";
-import { useKeyboardSound } from "@/hooks/useKeyboardSound";
+} from "@/shared/lib/local-storage";
+import { useKeyboardSound } from "@/shared/hooks/use-keyboard-sound";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import { Input } from "@/components/ui/input";
@@ -21,13 +21,10 @@ import {
   Printer,
   Save,
 } from "lucide-react";
+import { printSimpleDocument, downloadSimpleDocumentTxt } from "./simple-editor-export";
+import { ISimpleTextEditorProps } from "./simple-editor";
 
-export interface SimpleTextEditorProps {
-  fileId?: string | null;
-  onFileSaved?: (id: string) => void;
-}
-
-export const SimpleTextEditor: React.FC<SimpleTextEditorProps> = ({ fileId, onFileSaved }) => {
+export const SimpleTextEditor: React.FC<ISimpleTextEditorProps> = ({ fileId, onFileSaved }) => {
   const [title, setTitle] = useState(() => {
     if (typeof window !== "undefined") {
       return loadSimpleEditor().title;
@@ -54,19 +51,10 @@ export const SimpleTextEditor: React.FC<SimpleTextEditorProps> = ({ fileId, onFi
   useEffect(() => {
     const timer = setTimeout(() => {
       saveSimpleEditor({ title, description });
-      // If we have an active file ID, also update the file record
-      if (fileId) {
-        // We only auto-update the file record if we want auto-save to persist to the file list too. 
-        // For now, let's keep explicit "Save" for the file list to avoid accidental overwrites of the saved "version" 
-        // vs the "working copy".
-        // actually, modern apps usually auto-save everything.
-        // Let's stick to explicit save for "files" to match user request "save store... access from menu". 
-        // Usually implies a file system feel.
-      }
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [title, description, fileId]);
+  }, [title, description]);
 
   // Save keyboard sound setting
   useEffect(() => {
@@ -84,9 +72,7 @@ export const SimpleTextEditor: React.FC<SimpleTextEditorProps> = ({ fileId, onFi
   };
 
   const handleSave = () => {
-    // Dynamic import to avoid SSR issues if needed, or just use the imported functions
-    // We need to import saveSimpleFile and updateSimpleFile
-    import("@/utils/localStorage").then(({ saveSimpleFile, updateSimpleFile }) => {
+    import("@/shared/lib/local-storage").then(({ saveSimpleFile, updateSimpleFile }) => {
       if (fileId) {
         updateSimpleFile(fileId, { title, description });
         alert("File saved!");
@@ -101,53 +87,6 @@ export const SimpleTextEditor: React.FC<SimpleTextEditorProps> = ({ fileId, onFi
         }
       }
     });
-  };
-
-  const handlePrint = () => {
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
-
-    const content = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>${title || "Document"}</title>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              max-width: 800px;
-              margin: 40px auto;
-              padding: 20px;
-              line-height: 1.6;
-            }
-            h1 {
-              margin-bottom: 20px;
-              color: #333;
-            }
-            pre {
-              white-space: pre-wrap;
-              word-wrap: break-word;
-              font-family: inherit;
-            }
-            @media print {
-              body { margin: 0; }
-            }
-          </style>
-        </head>
-        <body>
-          <h1>${title || "Untitled Document"}</h1>
-          <pre>${description}</pre>
-        </body>
-      </html>
-    `;
-
-    printWindow.document.write(content);
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 250);
   };
 
   const handleFullscreen = () => {
@@ -174,33 +113,6 @@ export const SimpleTextEditor: React.FC<SimpleTextEditorProps> = ({ fileId, onFi
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
-  const handleDownloadTxt = () => {
-    const timestamp = new Date().toLocaleString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: true,
-    });
-
-    const separator = "=".repeat(title.length || 20);
-    const content = `${
-      title || "Untitled Document"
-    }\n${separator}\n\n${description}\n\n---\nGenerated on: ${timestamp}`;
-
-    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${title || "document"}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
   return (
     <div
       ref={editorRef}
@@ -208,8 +120,7 @@ export const SimpleTextEditor: React.FC<SimpleTextEditorProps> = ({ fileId, onFi
         isFullscreen ? "bg-background p-8" : "p-4"
       }`}
     >
-      <div className="w-full  h-full flex flex-col">
-        {/* Title Input */}
+      <div className="w-full h-full flex flex-col">
         <div className="flex-1 flex flex-col border rounded-2xl overflow-hidden bg-background shadow-lg">
           <Input
             type="text"
@@ -217,26 +128,21 @@ export const SimpleTextEditor: React.FC<SimpleTextEditorProps> = ({ fileId, onFi
             onChange={(e) => setTitle(e.target.value)}
             onKeyDown={handleTitleKeyDown}
             placeholder="Enter your title..."
-            // Increased title font size and adjusted height for better spacing
-            className="border-0 rounded-none focus-visible:ring-0 h-16 text-xl! font-bold px-5"
+            className="border-0 rounded-none focus-visible:ring-0 h-16 text-xl font-bold px-5"
           />
 
-          {/* Description Textarea */}
           <Textarea
             ref={textareaRef}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Write your content here..."
-            className="flex-1 border-0 rounded-none focus-visible:ring-0 resize-none text-xl! px-5 py-4 h-0"
+            className="flex-1 border-0 rounded-none focus-visible:ring-0 resize-none text-xl px-5 py-4 h-0"
           />
 
-          {/* Toolbar */}
           <div className="flex items-center justify-between bg-muted px-5 py-3 border-t">
-            {/* <h2 className="text-xl font-semibold">Simple Text Editor</h2> */}
             <div className="flex items-center gap-2">
-              {/* Keyboard Sound Toggle */}
               <Toggle
-                variant={"outline"}
+                variant="outline"
                 pressed={keyboardSoundEnabled}
                 onPressedChange={setKeyboardSoundEnabled}
                 aria-label="Toggle keyboard sound"
@@ -247,7 +153,6 @@ export const SimpleTextEditor: React.FC<SimpleTextEditorProps> = ({ fileId, onFi
                 ) : (
                   <VolumeX className="h-4 w-4" />
                 )}
-                {/* <span className="text-xs">Sound</span> */}
               </Toggle>
 
               <Button onClick={handleSave} size="sm" variant={fileId ? "default" : "secondary"}>
@@ -255,31 +160,20 @@ export const SimpleTextEditor: React.FC<SimpleTextEditorProps> = ({ fileId, onFi
                 {fileId ? "Save" : "Save As"}
               </Button>
 
-              {/* Fullscreen Button */}
               <Button onClick={handleFullscreen} size="sm">
                 {isFullscreen ? (
-                  <>
-                    <Minimize className="h-4 w-4" />
-                    {/* Exit Fullscreen */}
-                  </>
+                  <Minimize className="h-4 w-4" />
                 ) : (
-                  <>
-                    <Maximize className="h-4 w-4" />
-                    {/* Fullscreen */}
-                  </>
+                  <Maximize className="h-4 w-4" />
                 )}
               </Button>
 
-              {/* Print Button */}
-              <Button onClick={handlePrint} size="sm" variant="outline">
+              <Button onClick={() => printSimpleDocument(title, description)} size="sm" variant="outline">
                 <Printer className="h-4 w-4" />
-                {/* Print */}
               </Button>
 
-              {/* Download Button */}
-              <Button onClick={handleDownloadTxt} size="sm">
+              <Button onClick={() => downloadSimpleDocumentTxt(title, description)} size="sm">
                 <Download className="h-4 w-4" />
-                {/* Download TXT */}
               </Button>
             </div>
             <div className="text-sm text-muted-foreground flex items-center gap-3">

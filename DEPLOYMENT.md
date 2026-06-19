@@ -10,7 +10,7 @@
 
 1. Install Vercel CLI globally:
 ```bash
-npm i -g vercel
+bun add -g vercel
 ```
 
 2. Login to Vercel:
@@ -55,7 +55,7 @@ git push -u origin main
 4. Configure project:
    - Framework Preset: **Next.js**
    - Root Directory: **./
-   - Build Command: `yarn build` (auto-detected)
+   - Build Command: `bun run build` (auto-detected)
    - Output Directory: `.next` (auto-detected)
 
 5. Click **Deploy**
@@ -86,10 +86,10 @@ Vercel automatically deploys:
 
 ## Build Information
 
-- Framework: Next.js 16.0.3
+- Framework: Next.js 16
 - Node Version: 18.x or higher
-- Package Manager: Yarn
-- Build Command: `yarn build`
+- Package Manager: Bun
+- Build Command: `bun run build`
 - Output Directory: `.next`
 
 ## Features
@@ -111,7 +111,7 @@ Vercel automatically deploys:
 
 ### Build Fails
 - Ensure all dependencies are in `package.json`
-- Run `yarn build` locally to test
+- Run `bun run build` locally to test
 - Check Node.js version (use 18.x or higher)
 
 ### Fonts Not Loading
