@@ -253,3 +253,235 @@
   font-weight: normal;
   font-style: normal;
 }
+
+/* ==========================================================================
+   Color Themes (Light and Dark)
+   ========================================================================== */
+
+/* Sepia Theme */
+.theme-sepia {
+  --background: oklch(0.95 0.02 80);
+  --foreground: oklch(0.25 0.03 60);
+  --card: oklch(0.95 0.02 80);
+  --card-foreground: oklch(0.25 0.03 60);
+  --popover: oklch(0.95 0.02 80);
+  --popover-foreground: oklch(0.25 0.03 60);
+  --primary: oklch(0.45 0.05 60);
+  --primary-foreground: oklch(0.98 0.01 80);
+  --secondary: oklch(0.91 0.02 80);
+  --secondary-foreground: oklch(0.25 0.03 60);
+  --muted: oklch(0.91 0.02 80);
+  --muted-foreground: oklch(0.5 0.03 60);
+  --accent: oklch(0.91 0.02 80);
+  --accent-foreground: oklch(0.25 0.03 60);
+  --border: oklch(0.85 0.02 80);
+  --input: oklch(0.85 0.02 80);
+  --ring: oklch(0.6 0.03 60);
+}
+
+/* Sakura Theme */
+.theme-sakura {
+  --background: oklch(0.97 0.015 15);
+  --foreground: oklch(0.25 0.04 15);
+  --card: oklch(0.97 0.015 15);
+  --card-foreground: oklch(0.25 0.04 15);
+  --popover: oklch(0.97 0.015 15);
+  --popover-foreground: oklch(0.25 0.04 15);
+  --primary: oklch(0.55 0.12 15);
+  --primary-foreground: oklch(0.99 0.005 15);
+  --secondary: oklch(0.94 0.02 15);
+  --secondary-foreground: oklch(0.25 0.04 15);
+  --muted: oklch(0.94 0.02 15);
+  --muted-foreground: oklch(0.55 0.04 15);
+  --accent: oklch(0.94 0.02 15);
+  --accent-foreground: oklch(0.25 0.04 15);
+  --border: oklch(0.9 0.02 15);
+  --input: oklch(0.9 0.02 15);
+  --ring: oklch(0.7 0.08 15);
+}
+
+/* Nord Theme (extends dark) */
+.dark.theme-nord {
+  --background: oklch(0.26 0.025 240);
+  --foreground: oklch(0.94 0.01 240);
+  --card: oklch(0.29 0.02 240);
+  --card-foreground: oklch(0.94 0.01 240);
+  --popover: oklch(0.29 0.02 240);
+  --popover-foreground: oklch(0.94 0.01 240);
+  --primary: oklch(0.72 0.08 210);
+  --primary-foreground: oklch(0.26 0.025 240);
+  --secondary: oklch(0.33 0.02 240);
+  --secondary-foreground: oklch(0.94 0.01 240);
+  --muted: oklch(0.33 0.02 240);
+  --muted-foreground: oklch(0.68 0.02 240);
+  --accent: oklch(0.33 0.02 240);
+  --accent-foreground: oklch(0.94 0.01 240);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.55 0.03 240);
+}
+
+/* Ocean Theme (extends dark) */
+.dark.theme-ocean {
+  --background: oklch(0.18 0.025 245);
+  --foreground: oklch(0.92 0.02 230);
+  --card: oklch(0.22 0.025 245);
+  --card-foreground: oklch(0.92 0.02 230);
+  --popover: oklch(0.22 0.025 245);
+  --popover-foreground: oklch(0.92 0.02 230);
+  --primary: oklch(0.68 0.12 210);
+  --primary-foreground: oklch(0.18 0.025 245);
+  --secondary: oklch(0.24 0.025 245);
+  --secondary-foreground: oklch(0.92 0.02 230);
+  --muted: oklch(0.24 0.025 245);
+  --muted-foreground: oklch(0.62 0.04 230);
+  --accent: oklch(0.24 0.025 245);
+  --accent-foreground: oklch(0.92 0.02 230);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.5 0.06 210);
+}
+
+/* Forest Theme (extends dark) */
+.dark.theme-forest {
+  --background: oklch(0.19 0.022 140);
+  --foreground: oklch(0.92 0.02 140);
+  --card: oklch(0.23 0.02 140);
+  --card-foreground: oklch(0.92 0.02 140);
+  --popover: oklch(0.23 0.02 140);
+  --popover-foreground: oklch(0.92 0.02 140);
+  --primary: oklch(0.68 0.12 145);
+  --primary-foreground: oklch(0.19 0.022 140);
+  --secondary: oklch(0.25 0.02 140);
+  --secondary-foreground: oklch(0.92 0.02 140);
+  --muted: oklch(0.25 0.02 140);
+  --muted-foreground: oklch(0.65 0.03 140);
+  --accent: oklch(0.25 0.02 140);
+  --accent-foreground: oklch(0.92 0.02 140);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.52 0.08 145);
+}
+
+/* Document Page Layout Sizes in Lexical Editor */
+.page-a4 {
+  max-width: 800px !important;
+  min-height: 1000px !important;
+  margin: 1.5rem auto !important;
+  background-color: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05) !important;
+  padding: 1.5in !important;
+  border-radius: 0.75rem !important;
+  transition: all 0.2s ease-in-out;
+}
+.page-letter {
+  max-width: 816px !important;
+  min-height: 950px !important;
+  margin: 1.5rem auto !important;
+  background-color: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05) !important;
+  padding: 1.25in !important;
+  border-radius: 0.75rem !important;
+  transition: all 0.2s ease-in-out;
+}
+.page-legal {
+  max-width: 816px !important;
+  min-height: 1200px !important;
+  margin: 1.5rem auto !important;
+  background-color: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05) !important;
+  padding: 1.25in !important;
+  border-radius: 0.75rem !important;
+  transition: all 0.2s ease-in-out;
+}
+.page-tabloid {
+  max-width: 1000px !important;
+  min-height: 1400px !important;
+  margin: 1.5rem auto !important;
+  background-color: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05) !important;
+  padding: 1.5in !important;
+  border-radius: 0.75rem !important;
+  transition: all 0.2s ease-in-out;
+}
+.page-a3 {
+  max-width: 1050px !important;
+  min-height: 1350px !important;
+  margin: 1.5rem auto !important;
+  background-color: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05) !important;
+  padding: 1.75in !important;
+  border-radius: 0.75rem !important;
+  transition: all 0.2s ease-in-out;
+}
+.page-a5 {
+  max-width: 580px !important;
+  min-height: 750px !important;
+  margin: 1.5rem auto !important;
+  background-color: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05) !important;
+  padding: 0.75in !important;
+  border-radius: 0.75rem !important;
+  transition: all 0.2s ease-in-out;
+}
+
+/* Layout Orientations */
+.page-landscape {
+  max-width: 1050px !important;
+  min-height: 650px !important;
+}
+
+/* Margin variations */
+.margin-narrow {
+  padding: 0.5in !important;
+}
+.margin-wide {
+  padding: 2.25in !important;
+}
+
+/* Custom Slim Scrollbars */
+*::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.4) !important;
+  border-radius: 9999px !important;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.6) !important;
+}
+
+/* For dark mode */
+.dark *::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25) !important;
+}
+
+.dark *::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.45) !important;
+}
+
+/* For Firefox */
+* {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(0, 0, 0, 0.4) transparent !important;
+}
+
+.dark * {
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent !important;
+}
+
+
+

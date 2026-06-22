@@ -74,10 +74,10 @@ export const SlateRichTextEditor: React.FC<ISlateRichTextEditorProps> = ({
   }, [value, fileId, showPreview, actionsRef]);
 
   return (
-    <div className="w-full min-h-screen bg-background overflow-y-auto px-6 md:px-12 py-24">
+    <div className="w-full min-h-screen bg-background overflow-y-auto px-6 md:px-12 pt-16 pb-12">
       <div className={`${showPreview ? "max-w-7xl" : "max-w-4xl"} mx-auto w-full flex flex-col`}>
         {/* Formatting Toolbar */}
-        <div className="mb-6 sticky top-20 z-10 bg-background/95 backdrop-blur-sm pb-2 border-b border-border/40">
+        <div className="mb-6 sticky top-4 z-10 bg-background/95 backdrop-blur-sm pb-2 border-b border-border/40">
           <SlateToolbar editor={editor} triggerReRender={triggerReRender} />
         </div>
 

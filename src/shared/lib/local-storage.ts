@@ -87,6 +87,24 @@ export const deleteSimpleFile = (id: string): void => {
   localStorage.setItem("simpleEditor_files", JSON.stringify(files));
 };
 
+export const renameSimpleFile = (id: string, newName: string): void => {
+  if (typeof window === "undefined") return;
+  const files = listSimpleFiles();
+  const index = files.findIndex((f) => f.id === id);
+  if (index !== -1) {
+    files[index] = {
+      ...files[index],
+      name: newName,
+      content: {
+        ...files[index].content,
+        title: newName,
+      },
+      updatedAt: Date.now(),
+    };
+    localStorage.setItem("simpleEditor_files", JSON.stringify(files));
+  }
+};
+
 // Rich Text Editor Storage
 // Using any here to accept Slate structure
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -152,6 +170,20 @@ export const deleteRichFile = (id: string): void => {
   if (typeof window === "undefined") return;
   const files = listRichFiles().filter((f) => f.id !== id);
   localStorage.setItem("richEditor_files", JSON.stringify(files));
+};
+
+export const renameRichFile = (id: string, newName: string): void => {
+  if (typeof window === "undefined") return;
+  const files = listRichFiles();
+  const index = files.findIndex((f) => f.id === id);
+  if (index !== -1) {
+    files[index] = {
+      ...files[index],
+      name: newName,
+      updatedAt: Date.now(),
+    };
+    localStorage.setItem("richEditor_files", JSON.stringify(files));
+  }
 };
 
 // Keyboard Sound Setting

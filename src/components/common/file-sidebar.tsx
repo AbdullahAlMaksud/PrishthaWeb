@@ -4,10 +4,12 @@ import {
   listRichFiles,
   deleteSimpleFile,
   deleteRichFile,
+  renameSimpleFile,
+  renameRichFile,
   SavedFile,
 } from "@/shared/lib/local-storage";
 import { Button } from "@/components/ui/button";
-import { FileText, Trash2, Plus, PenTool } from "lucide-react";
+import { FileText, Trash2, Plus, PenTool, Pencil } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -64,6 +66,18 @@ export const FileSidebar: React.FC<IFileSidebarProps> = ({
     }
   };
 
+  const handleRename = (id: string, currentName: string, type: "simple" | "rich") => {
+    const newName = prompt("Rename document:", currentName);
+    if (newName && newName.trim()) {
+      if (type === "simple") {
+        renameSimpleFile(id, newName.trim());
+      } else {
+        renameRichFile(id, newName.trim());
+      }
+      refreshFiles();
+    }
+  };
+
   const renderFileList = (files: SavedFile<unknown>[], type: "simple" | "rich") => (
     <div className="space-y-2 p-4">
       <Button
@@ -98,34 +112,50 @@ export const FileSidebar: React.FC<IFileSidebarProps> = ({
                 {formatDistanceToNow(file.updatedAt, { addSuffix: true })}
               </div>
             </button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10 cursor-pointer"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete File?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will permanently delete "{file.name}". This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => handleDelete(file.id, type)}
-                    className="bg-destructive hover:bg-destructive/90 cursor-pointer"
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRename(file.id, file.name, type);
+                }}
+                className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
+                aria-label="Rename file"
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 cursor-pointer"
+                    aria-label="Delete file"
                   >
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete File?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete "{file.name}". This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => handleDelete(file.id, type)}
+                      className="bg-destructive hover:bg-destructive/90 cursor-pointer"
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           </div>
         ))
       )}

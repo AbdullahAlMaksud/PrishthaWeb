@@ -4,12 +4,22 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   saveSimpleEditor,
   loadSimpleEditor,
+  listSimpleFiles,
 } from "@/shared/lib/local-storage";
 import { useKeyboardSound } from "@/shared/hooks/use-keyboard-sound";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { printSimpleDocument, downloadSimpleDocumentTxt } from "./simple-editor-export";
 import { ISimpleTextEditorProps } from "./simple-editor";
+
+const getAutoTitle = (text: string): string => {
+  if (!text || !text.trim()) return "Untitled Document";
+  const firstLine = text.split("\n")[0].trim();
+  if (!firstLine) return "Untitled Document";
+  const words = firstLine.split(/\s+/).filter(Boolean);
+  if (words.length <= 5) {
+    return firstLine;
+  }
+  return words.slice(0, 5).join(" ") + "...";
+};
 
 export const SimpleTextEditor: React.FC<ISimpleTextEditorProps> = ({ 
   fileId, 
@@ -17,12 +27,6 @@ export const SimpleTextEditor: React.FC<ISimpleTextEditorProps> = ({
   actionsRef, 
   keyboardSoundEnabled 
 }) => {
-  const [title, setTitle] = useState(() => {
-    if (typeof window !== "undefined") {
-      return loadSimpleEditor().title;
-    }
-    return "";
-  });
   const [description, setDescription] = useState(() => {
     if (typeof window !== "undefined") {
       return loadSimpleEditor().description;
@@ -31,6 +35,35 @@ export const SimpleTextEditor: React.FC<ISimpleTextEditorProps> = ({
   });
   const editorRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const [savedFileName, setSavedFileName] = useState<string | null>(null);
+  const [savedFileDescription, setSavedFileDescription] = useState<string>("");
+
+  // Sync title from storage files lists to allow sidebar renaming to display correctly
+  useEffect(() => {
+    if (!fileId) {
+      setSavedFileName(null);
+      setSavedFileDescription("");
+      return;
+    }
+
+    const syncWithStorage = () => {
+      const files = listSimpleFiles();
+      const file = files.find((f) => f.id === fileId);
+      if (file) {
+        setSavedFileName(file.name);
+        setSavedFileDescription(file.content.description);
+      }
+    };
+
+    syncWithStorage();
+    const interval = setInterval(syncWithStorage, 1000);
+    return () => clearInterval(interval);
+  }, [fileId]);
+
+  // If user renamed the document in sidebar, saved name differs from its auto-derived title.
+  const isCustomNamed = savedFileName !== null && savedFileName !== getAutoTitle(savedFileDescription);
+  const title = isCustomNamed ? (savedFileName || "Untitled Document") : getAutoTitle(description);
 
   // Auto-save to localStorage
   useEffect(() => {
@@ -44,27 +77,17 @@ export const SimpleTextEditor: React.FC<ISimpleTextEditorProps> = ({
   // Enable keyboard sound
   useKeyboardSound(keyboardSoundEnabled, editorRef);
 
-  const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      textareaRef.current?.focus();
-    }
-  };
-
   const handleSave = () => {
     import("@/shared/lib/local-storage").then(({ saveSimpleFile, updateSimpleFile }) => {
       if (fileId) {
         updateSimpleFile(fileId, { title, description });
         alert("File saved successfully!");
       } else {
-        const name = prompt("Enter file name:", title || "Untitled");
-        if (name) {
-          const newFile = saveSimpleFile(name, { title, description });
-          if (onFileSaved) {
-            onFileSaved(newFile.id);
-          }
-          alert("File saved as new!");
+        const newFile = saveSimpleFile(title, { title, description });
+        if (onFileSaved) {
+          onFileSaved(newFile.id);
         }
+        alert("File saved successfully!");
       }
     });
   };
@@ -80,44 +103,23 @@ export const SimpleTextEditor: React.FC<ISimpleTextEditorProps> = ({
     }
   }, [title, description, fileId, actionsRef]);
 
-  // Dynamic height adjustment for textarea to prevent double scrollbars
-  const adjustHeight = () => {
-    const tx = textareaRef.current;
-    if (tx) {
-      tx.style.height = "auto";
-      tx.style.height = tx.scrollHeight + "px";
-    }
-  };
-
-  useEffect(() => {
-    adjustHeight();
-  }, [description]);
-
   return (
     <div
       ref={editorRef}
-      className="w-full min-h-screen bg-background overflow-y-auto px-6 md:px-12 py-24"
+      className="w-full h-full bg-background flex flex-col px-6 md:px-12 pt-8 pb-8 overflow-hidden"
     >
-      <div className="max-w-4xl mx-auto w-full flex flex-col min-h-full">
-        <Input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          onKeyDown={handleTitleKeyDown}
-          placeholder="Enter your title..."
-          className="border-0 rounded-none focus-visible:ring-0 text-4xl font-extrabold px-0 mb-6 bg-transparent outline-none shadow-none text-foreground"
-        />
-
-        <Textarea
+      <div className="w-full flex-1 flex flex-col min-h-0 bg-card border border-border/40 rounded-2xl p-6 md:p-10 shadow-lg">
+        <textarea
           ref={textareaRef}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Write your content here..."
-          className="flex-1 border-0 rounded-none focus-visible:ring-0 resize-none text-lg px-0 py-2 bg-transparent outline-none shadow-none text-foreground leading-relaxed min-h-[400px] overflow-hidden"
+          className="flex-1 w-full bg-transparent resize-none outline-none border-0 text-lg text-foreground leading-relaxed min-h-0 overflow-y-auto placeholder:text-muted-foreground"
+          autoFocus
         />
 
         {/* Minimal info at bottom */}
-        <div className="flex items-center justify-between border-t pt-4 mt-12 text-sm text-muted-foreground">
+        <div className="flex items-center justify-between border-t pt-4 mt-6 text-sm text-muted-foreground shrink-0">
           <div className="flex gap-4">
             <span>Characters: {description.length}</span>
             <span>•</span>

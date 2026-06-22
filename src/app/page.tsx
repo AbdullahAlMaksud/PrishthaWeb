@@ -15,10 +15,10 @@ import {
 } from "@/shared/lib/local-storage";
 import { Navbar } from "@/components/common/navbar";
 
-const SlateRichTextEditor = dynamic(
+const LexicalRichTextEditor = dynamic(
   () =>
-    import("@/features/rich-text-editor/slate-rich-text-editor").then((mod) => ({
-      default: mod.SlateRichTextEditor,
+    import("@/features/rich-text-editor/lexical-rich-text-editor").then((mod) => ({
+      default: mod.LexicalRichTextEditor,
     })),
   { ssr: false }
 );
@@ -32,6 +32,22 @@ interface IEditorActions {
   showPreview?: boolean;
 }
 
+interface ThemePreset {
+  id: string;
+  name: string;
+  className: string;
+}
+
+const THEMES: ThemePreset[] = [
+  { id: "default-light", name: "Default Light", className: "" },
+  { id: "sakura-light", name: "Sakura Light", className: "theme-sakura" },
+  { id: "sepia-light", name: "Sepia Light", className: "theme-sepia" },
+  { id: "default-dark", name: "Default Dark", className: "dark" },
+  { id: "nord-dark", name: "Nord Dark", className: "dark theme-nord" },
+  { id: "ocean-dark", name: "Ocean Dark", className: "dark theme-ocean" },
+  { id: "forest-dark", name: "Forest Dark", className: "dark theme-forest" },
+];
+
 export default function Home() {
   const [currentSimpleFileId, setCurrentSimpleFileId] = useState<string | null>(null);
   const [currentRichFileId, setCurrentRichFileId] = useState<string | null>(null);
@@ -39,16 +55,87 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState("simple");
   const [triggerVal, setTriggerVal] = useState(0); // Forces re-render of floating navbar action status
   
-  const [theme, setTheme] = useState<"light" | "dark">(() => {
+  const [isNavbarPinned, setIsNavbarPinned] = useState(() => {
     if (typeof window !== "undefined") {
-      const savedTheme = localStorage.getItem("theme") as "light" | "dark";
-      if (savedTheme) {
-        document.documentElement.classList.toggle("dark", savedTheme === "dark");
-        return savedTheme;
+      return localStorage.getItem("navbarPinned") === "true";
+    }
+    return false;
+  });
+
+  const handleToggleNavbarPin = () => {
+    const nextPinned = !isNavbarPinned;
+    setIsNavbarPinned(nextPinned);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("navbarPinned", String(nextPinned));
+    }
+  };
+
+  const [themeId, setThemeId] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("selectedThemeId");
+      if (saved && THEMES.some((t) => t.id === saved)) {
+        return saved;
       }
     }
-    return "light";
+    return "default-light";
   });
+
+  const applyTheme = (id: string) => {
+    if (typeof window === "undefined") return;
+    const currentThemeObj = THEMES.find((t) => t.id === id) || THEMES[0];
+    const doc = document.documentElement;
+
+    doc.classList.remove(
+      "dark",
+      "theme-sakura",
+      "theme-sepia",
+      "theme-nord",
+      "theme-ocean",
+      "theme-forest"
+    );
+
+    if (currentThemeObj.className) {
+      currentThemeObj.className.split(" ").forEach((cls) => {
+        if (cls) doc.classList.add(cls);
+      });
+    }
+
+    localStorage.setItem("selectedThemeId", id);
+    setThemeId(id);
+  };
+
+  useEffect(() => {
+    applyTheme(themeId);
+  }, []);
+
+  const cycleTheme = () => {
+    const currentIndex = THEMES.findIndex((t) => t.id === themeId);
+    const nextIndex = (currentIndex + 1) % THEMES.length;
+    applyTheme(THEMES[nextIndex].id);
+  };
+
+  // Keyboard shortcut: Pressing 'd' outside any editor/input elements cycles the theme
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === "d") {
+        const activeEl = document.activeElement;
+        if (activeEl) {
+          const tagName = activeEl.tagName.toLowerCase();
+          const isInput =
+            tagName === "input" ||
+            tagName === "textarea" ||
+            activeEl.hasAttribute("contenteditable") ||
+            activeEl.closest("[contenteditable]");
+          if (isInput) return; // Ignore if focused inside editor or input
+        }
+
+        cycleTheme();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [themeId]);
 
   const [keyboardSoundEnabled, setKeyboardSoundEnabled] = useState(() => {
     if (typeof window !== "undefined") {
@@ -56,13 +143,6 @@ export default function Home() {
     }
     return false;
   });
-
-  const toggleTheme = () => {
-    const newTheme = theme === "light" ? "dark" : "light";
-    setTheme(newTheme);
-    localStorage.setItem("theme", newTheme);
-    document.documentElement.classList.toggle("dark", newTheme === "dark");
-  };
 
   const handleToggleSound = (enabled: boolean) => {
     setKeyboardSoundEnabled(enabled);
@@ -116,7 +196,7 @@ export default function Home() {
 
   return (
     <div className="h-screen w-screen flex flex-col bg-background text-foreground overflow-hidden relative">
-      <main className="flex-1 overflow-hidden relative">
+      <main className={`flex-1 overflow-hidden relative transition-all duration-300 ${isNavbarPinned ? "pr-16 md:pr-24" : "pr-0"}`}>
         <Tabs
           value={activeTab}
           onValueChange={setActiveTab}
@@ -128,8 +208,8 @@ export default function Home() {
             setActiveTab={setActiveTab}
             isSheetOpen={isSheetOpen}
             setIsSheetOpen={setIsSheetOpen}
-            theme={theme}
-            toggleTheme={toggleTheme}
+            theme={themeId}
+            toggleTheme={cycleTheme}
             keyboardSoundEnabled={keyboardSoundEnabled}
             setKeyboardSoundEnabled={handleToggleSound}
             onNewFile={handleNewFile}
@@ -142,6 +222,8 @@ export default function Home() {
               setTriggerVal((v) => v + 1);
             }}
             showPreview={editorActionsRef.current.showPreview}
+            isNavbarPinned={isNavbarPinned}
+            onToggleNavbarPin={handleToggleNavbarPin}
           />
 
           <TabsContent value="simple" className="h-full w-full outline-none data-[state=inactive]:hidden">
@@ -155,7 +237,7 @@ export default function Home() {
           </TabsContent>
 
           <TabsContent value="rich" className="h-full w-full outline-none data-[state=inactive]:hidden">
-            <SlateRichTextEditor 
+            <LexicalRichTextEditor 
               key={currentRichFileId || "new"}
               fileId={currentRichFileId}
               onFileSaved={setCurrentRichFileId}
