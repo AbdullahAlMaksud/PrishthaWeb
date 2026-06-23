@@ -14,4 +14,7 @@ export interface ISimpleTextEditorProps {
   onFileSaved?: (id: string) => void;
   actionsRef?: React.MutableRefObject<IEditorActions>;
   keyboardSoundEnabled: boolean;
+  keyboardSoundType: string;
+  onToggleSound?: (enabled: boolean) => void;
+  showAlert?: (title: string, desc: string) => void;
 }

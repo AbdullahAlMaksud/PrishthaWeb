@@ -37,10 +37,13 @@ export const exportEditorjsToTxt = async (data: OutputData): Promise<void> => {
   URL.revokeObjectURL(url);
 };
 
-export const exportEditorjsToPdf = async (data: OutputData): Promise<void> => {
+export const exportEditorjsToPdf = async (
+  data: OutputData,
+  showAlert?: (title: string, desc: string) => void
+): Promise<void> => {
   try {
     const { default: jsPDF } = await import("jspdf");
-    const { default: html2canvas } = await import("html2canvas");
+    const { default: html2canvas } = await import("html2canvas-pro");
 
     // Create a temporary div to render content
     const tempDiv = document.createElement("div");
@@ -124,6 +127,8 @@ export const exportEditorjsToPdf = async (data: OutputData): Promise<void> => {
     pdf.save("document.pdf");
   } catch (error) {
     console.error("Error exporting PDF:", error);
-    alert("Failed to export PDF. Please try again.");
+    if (showAlert) {
+      showAlert("Error", "Failed to export PDF. Please try again.");
+    }
   }
 };

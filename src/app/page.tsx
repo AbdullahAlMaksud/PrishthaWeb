@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
+import { SettingsModal } from "@/components/common/settings-modal";
 import { SimpleTextEditor } from "@/features/plain-text-editor/simple-text-editor";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -11,9 +12,21 @@ import {
   listSimpleFiles, 
   listRichFiles, 
   loadKeyboardSoundSetting, 
-  saveKeyboardSoundSetting 
+  saveKeyboardSoundSetting,
+  loadKeyboardSoundTypeSetting,
+  saveKeyboardSoundTypeSetting
 } from "@/shared/lib/local-storage";
 import { Navbar } from "@/components/common/navbar";
+import { ParticlesComponent } from "@/components/common/particles-component";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 
 const LexicalRichTextEditor = dynamic(
   () =>
@@ -54,13 +67,35 @@ export default function Home() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("simple");
   const [triggerVal, setTriggerVal] = useState(0); // Forces re-render of floating navbar action status
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   
-  const [isNavbarPinned, setIsNavbarPinned] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("navbarPinned") === "true";
-    }
-    return false;
-  });
+  const [alertDialog, setAlertDialog] = useState<{
+    title: string;
+    description: string;
+  } | null>(null);
+
+  const handleShowAlert = (title: string, description: string) => {
+    setAlertDialog({ title, description });
+  };
+  
+  const [promptDialog, setPromptDialog] = useState<{
+    title: string;
+    defaultValue: string;
+    onSubmit: (value: string) => void;
+  } | null>(null);
+
+  const [promptValue, setPromptValue] = useState("");
+
+  const handleShowPrompt = (
+    title: string,
+    defaultValue: string,
+    onSubmit: (value: string) => void
+  ) => {
+    setPromptValue(defaultValue);
+    setPromptDialog({ title, defaultValue, onSubmit });
+  };
+  
+  const [isNavbarPinned, setIsNavbarPinned] = useState(false);
 
   const handleToggleNavbarPin = () => {
     const nextPinned = !isNavbarPinned;
@@ -70,15 +105,7 @@ export default function Home() {
     }
   };
 
-  const [themeId, setThemeId] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("selectedThemeId");
-      if (saved && THEMES.some((t) => t.id === saved)) {
-        return saved;
-      }
-    }
-    return "default-light";
-  });
+  const [themeId, setThemeId] = useState("default-light");
 
   const applyTheme = (id: string) => {
     if (typeof window === "undefined") return;
@@ -105,7 +132,20 @@ export default function Home() {
   };
 
   useEffect(() => {
-    applyTheme(themeId);
+    // Theme loading
+    const savedTheme = localStorage.getItem("selectedThemeId");
+    if (savedTheme && THEMES.some((t) => t.id === savedTheme)) {
+      applyTheme(savedTheme);
+    } else {
+      applyTheme("default-light");
+    }
+
+    // Sidebar Pinned State loading
+    setIsNavbarPinned(localStorage.getItem("navbarPinned") === "true");
+
+    // Sound Settings loading
+    setKeyboardSoundEnabled(loadKeyboardSoundSetting());
+    setKeyboardSoundType(loadKeyboardSoundTypeSetting());
   }, []);
 
   const cycleTheme = () => {
@@ -114,39 +154,57 @@ export default function Home() {
     applyTheme(THEMES[nextIndex].id);
   };
 
-  // Keyboard shortcut: Pressing 'd' outside any editor/input elements cycles the theme
+  // Keyboard shortcuts: Pressing shortcuts outside edit fields triggers features
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === "d") {
-        const activeEl = document.activeElement;
-        if (activeEl) {
-          const tagName = activeEl.tagName.toLowerCase();
-          const isInput =
-            tagName === "input" ||
-            tagName === "textarea" ||
-            activeEl.hasAttribute("contenteditable") ||
-            activeEl.closest("[contenteditable]");
-          if (isInput) return; // Ignore if focused inside editor or input
-        }
+      const activeEl = document.activeElement;
+      if (activeEl) {
+        const tagName = activeEl.tagName.toLowerCase();
+        const isInput =
+          tagName === "input" ||
+          tagName === "textarea" ||
+          activeEl.hasAttribute("contenteditable") ||
+          activeEl.closest("[contenteditable]");
+        if (isInput) return; // Ignore if focused inside editor or input
+      }
 
+      const key = e.key.toLowerCase();
+      if (key === "d") {
         cycleTheme();
+      } else if (key === "s") {
+        e.preventDefault();
+        setIsSettingsOpen((prev) => !prev);
+      } else if (key === "p") {
+        e.preventDefault();
+        handleToggleNavbarPin();
+      } else if (key === "f") {
+        e.preventDefault();
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        } else {
+          document.exitFullscreen().catch(() => {});
+        }
+      } else if (e.key === "Escape") {
+        setIsSettingsOpen(false);
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [themeId]);
+  }, [themeId, isNavbarPinned]);
 
-  const [keyboardSoundEnabled, setKeyboardSoundEnabled] = useState(() => {
-    if (typeof window !== "undefined") {
-      return loadKeyboardSoundSetting();
-    }
-    return false;
-  });
+  const [keyboardSoundEnabled, setKeyboardSoundEnabled] = useState(false);
+
+  const [keyboardSoundType, setKeyboardSoundType] = useState("default");
 
   const handleToggleSound = (enabled: boolean) => {
     setKeyboardSoundEnabled(enabled);
     saveKeyboardSoundSetting(enabled);
+  };
+
+  const handleSelectSoundType = (type: string) => {
+    setKeyboardSoundType(type);
+    saveKeyboardSoundTypeSetting(type);
   };
 
   // Ref to hold the active editor actions
@@ -195,8 +253,9 @@ export default function Home() {
   };
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-background text-foreground overflow-hidden relative">
-      <main className={`flex-1 overflow-hidden relative transition-all duration-300 ${isNavbarPinned ? "pr-16 md:pr-24" : "pr-0"}`}>
+    <div className="h-screen w-screen flex flex-col text-foreground overflow-hidden relative">
+      <ParticlesComponent themeId={themeId} />
+      <main className={`flex-1 overflow-hidden relative z-10 transition-all duration-300 ${isNavbarPinned ? "pr-16 md:pr-24" : "pr-0"}`}>
         <Tabs
           value={activeTab}
           onValueChange={setActiveTab}
@@ -210,8 +269,6 @@ export default function Home() {
             setIsSheetOpen={setIsSheetOpen}
             theme={themeId}
             toggleTheme={cycleTheme}
-            keyboardSoundEnabled={keyboardSoundEnabled}
-            setKeyboardSoundEnabled={handleToggleSound}
             onNewFile={handleNewFile}
             onSave={() => editorActionsRef.current.save?.()}
             onDownloadTxt={() => editorActionsRef.current.downloadTxt?.()}
@@ -224,6 +281,7 @@ export default function Home() {
             showPreview={editorActionsRef.current.showPreview}
             isNavbarPinned={isNavbarPinned}
             onToggleNavbarPin={handleToggleNavbarPin}
+            onOpenSettings={() => setIsSettingsOpen(true)}
           />
 
           <TabsContent value="simple" className="h-full w-full outline-none data-[state=inactive]:hidden">
@@ -233,6 +291,9 @@ export default function Home() {
               onFileSaved={setCurrentSimpleFileId}
               actionsRef={editorActionsRef}
               keyboardSoundEnabled={keyboardSoundEnabled}
+              keyboardSoundType={keyboardSoundType}
+              onToggleSound={handleToggleSound}
+              showAlert={handleShowAlert}
             />
           </TabsContent>
 
@@ -243,6 +304,10 @@ export default function Home() {
               onFileSaved={setCurrentRichFileId}
               actionsRef={editorActionsRef}
               keyboardSoundEnabled={keyboardSoundEnabled}
+              keyboardSoundType={keyboardSoundType}
+              onToggleSound={handleToggleSound}
+              showAlert={handleShowAlert}
+              showPrompt={handleShowPrompt}
             />
           </TabsContent>
         </Tabs>
@@ -284,9 +349,89 @@ export default function Home() {
             onSelectFile={handleSelectFile}
             onNewFile={handleNewFile}
             currentFileId={activeTab === "simple" ? currentSimpleFileId : currentRichFileId}
+            showPrompt={handleShowPrompt}
            />
         </div>
       </aside>
+
+      {/* App Alert Modals */}
+      {alertDialog && (
+        <AlertDialog open={!!alertDialog} onOpenChange={(open) => !open && setAlertDialog(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{alertDialog.title}</AlertDialogTitle>
+              <AlertDialogDescription>{alertDialog.description}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction className="cursor-pointer" onClick={() => setAlertDialog(null)}>
+                Okay
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+
+      {/* App Prompt Modal */}
+      {promptDialog && (
+        <AlertDialog open={!!promptDialog} onOpenChange={(open) => !open && setPromptDialog(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{promptDialog.title}</AlertDialogTitle>
+              <AlertDialogDescription>
+                Please enter a name for your document below.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="py-4">
+              <input
+                type="text"
+                value={promptValue}
+                onChange={(e) => setPromptValue(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md bg-transparent text-foreground outline-none border-border focus:ring-1 focus:ring-primary font-medium"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    promptDialog.onSubmit(promptValue);
+                    setPromptDialog(null);
+                  }
+                }}
+              />
+            </div>
+            <AlertDialogFooter>
+              <button
+                type="button"
+                className="px-4 py-2 border rounded-md text-sm cursor-pointer hover:bg-muted text-foreground"
+                onClick={() => setPromptDialog(null)}
+              >
+                Cancel
+              </button>
+              <AlertDialogAction
+                className="cursor-pointer"
+                onClick={() => {
+                  promptDialog.onSubmit(promptValue);
+                  setPromptDialog(null);
+                }}
+              >
+                Save
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        themeId={themeId}
+        onSelectTheme={applyTheme}
+        keyboardSoundEnabled={keyboardSoundEnabled}
+        onToggleSound={handleToggleSound}
+        keyboardSoundType={keyboardSoundType}
+        onSelectSoundType={handleSelectSoundType}
+        isNavbarPinned={isNavbarPinned}
+        onToggleNavbarPin={handleToggleNavbarPin}
+        themes={THEMES}
+      />
     </div>
   );
 }
+

@@ -33,4 +33,6 @@ export interface ISlateRichTextEditorProps {
   onFileSaved?: (id: string) => void;
   actionsRef?: React.MutableRefObject<IEditorActions>;
   keyboardSoundEnabled: boolean;
+  showAlert?: (title: string, desc: string) => void;
+  showPrompt?: (title: string, defaultValue: string, onSubmit: (value: string) => void) => void;
 }

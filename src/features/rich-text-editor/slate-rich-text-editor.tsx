@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { createEditor, Descendant } from "slate";
 import { Slate, Editable, withReact } from "slate-react";
 import { withHistory } from "slate-history";
@@ -19,46 +19,64 @@ export const SlateRichTextEditor: React.FC<ISlateRichTextEditorProps> = ({
   fileId, 
   onFileSaved, 
   actionsRef, 
-  keyboardSoundEnabled 
+  keyboardSoundEnabled,
+  showAlert,
+  showPrompt
 }) => {
   const [showPreview, setShowPreview] = useState(false);
   const editor = useMemo(() => withHistory(withReact(createEditor())), []);
   const previewEditor = useMemo(() => withReact(createEditor()), []);
 
-  const [value, setValue] = useState<Descendant[]>(() => {
+  const [value, setValue] = useState<Descendant[]>(INITIAL_VALUE);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Load initial content on client mount
+  useEffect(() => {
     const saved = loadRichEditor();
-    return saved && Array.isArray(saved) ? saved : INITIAL_VALUE;
-  });
+    if (saved && Array.isArray(saved)) {
+      setValue(saved);
+    }
+    setIsLoaded(true);
+  }, []);
 
   // Enable keyboard sound
-  useKeyboardSound(keyboardSoundEnabled, undefined, true);
+  useKeyboardSound(keyboardSoundEnabled, undefined, "default");
 
   const handleChange = (newValue: Descendant[]) => {
     setValue(newValue);
-    saveRichEditor(newValue);
+    if (isLoaded) {
+      saveRichEditor(newValue);
+    }
   };
 
   const triggerReRender = () => {
     setValue([...editor.children]);
   };
 
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     import("@/shared/lib/local-storage").then(({ saveRichFile, updateRichFile }) => {
       if (fileId) {
         updateRichFile(fileId, value);
-        alert("File saved successfully!");
+        if (showAlert) {
+          showAlert("Success", "File saved successfully!");
+        }
       } else {
-        const name = prompt("Enter file name:", "Untitled Document");
-        if (name) {
-          const newFile = saveRichFile(name, value);
-          if (onFileSaved) {
-            onFileSaved(newFile.id);
-          }
-          alert("File saved as new!");
+        if (showPrompt) {
+          showPrompt("Enter file name", "Untitled Document", (name) => {
+            if (name && name.trim()) {
+              const newFile = saveRichFile(name.trim(), value);
+              if (onFileSaved) {
+                onFileSaved(newFile.id);
+              }
+              if (showAlert) {
+                showAlert("Success", "File saved as new!");
+              }
+            }
+          });
         }
       }
     });
-  };
+  }, [fileId, value, onFileSaved, showAlert, showPrompt]);
 
   // Expose actions to parent component
   useEffect(() => {
@@ -66,12 +84,12 @@ export const SlateRichTextEditor: React.FC<ISlateRichTextEditorProps> = ({
       actionsRef.current = {
         save: handleSave,
         downloadTxt: () => exportToTxt(value),
-        downloadPdf: () => exportToPdf(value),
+        downloadPdf: () => exportToPdf(value, showAlert),
         togglePreview: () => setShowPreview((prev) => !prev),
         showPreview: showPreview,
       };
     }
-  }, [value, fileId, showPreview, actionsRef]);
+  }, [value, showPreview, actionsRef, showAlert, handleSave]);
 
   return (
     <div className="w-full min-h-screen bg-background overflow-y-auto px-6 md:px-12 pt-16 pb-12">

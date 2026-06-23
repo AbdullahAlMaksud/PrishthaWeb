@@ -202,3 +202,17 @@ export const loadKeyboardSoundSetting = (): boolean => {
   }
   return false;
 };
+
+// Keyboard Sound Type Setting
+export const saveKeyboardSoundTypeSetting = (type: string): void => {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("keyboardSoundType", type);
+  }
+};
+
+export const loadKeyboardSoundTypeSetting = (): string => {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("keyboardSoundType") || "default";
+  }
+  return "default";
+};

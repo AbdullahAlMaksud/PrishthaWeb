@@ -1,34 +1,13 @@
-import { LexicalEditor, $getRoot } from "lexical";
-import { $generateHtmlFromNodes } from "@lexical/html";
+import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas-pro";
 
-export const exportLexicalToTxt = (editor: LexicalEditor): void => {
-  let content = "";
-  editor.getEditorState().read(() => {
-    content = $getRoot().getTextContent();
-  });
-
-  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "document.txt";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-};
-
-export const exportLexicalToPdf = async (
-  editor: LexicalEditor,
+export const exportSimpleToPdf = async (
+  title: string,
+  description: string,
   showAlert?: (title: string, desc: string) => void
 ): Promise<void> => {
   try {
-    let htmlContent = "";
-    editor.getEditorState().read(() => {
-      htmlContent = $generateHtmlFromNodes(editor);
-    }, { editor });
-
-    if (!htmlContent || htmlContent.trim() === "") {
+    if (!description || description.trim() === "") {
       if (showAlert) {
         showAlert("Warning", "No content to export. Please add some text first.");
       }
@@ -57,29 +36,32 @@ export const exportLexicalToPdf = async (
     `;
     tempContainer.setAttribute("data-html2canvas-ignore-parent", "true");
 
-    // Add print styles to ensure correct layout and styling
     const styleElement = document.createElement("style");
     styleElement.innerHTML = `
-      h1 { font-size: 28px; font-weight: bold; margin-top: 16px; margin-bottom: 8px; color: #111827; }
-      h2 { font-size: 22px; font-weight: bold; margin-top: 14px; margin-bottom: 6px; color: #1f2937; }
-      h3 { font-size: 18px; font-weight: bold; margin-top: 12px; margin-bottom: 4px; color: #374151; }
-      p { font-size: 14px; line-height: 1.6; margin-top: 0; margin-bottom: 8px; color: #1f2937; }
-      ul { list-style-type: disc; padding-left: 20px; margin-bottom: 8px; }
-      ol { list-style-type: decimal; padding-left: 20px; margin-bottom: 8px; }
-      li { font-size: 14px; line-height: 1.6; margin-bottom: 4px; }
-      blockquote { border-left: 4px solid #d1d5db; padding-left: 12px; font-style: italic; color: #4b5563; margin: 12px 0; }
-      code { background-color: #f3f4f6; padding: 2px 4px; border-radius: 4px; font-family: monospace; font-size: 12px; }
-      span[style] { display: inline; }
-      img { max-width: 100%; height: auto; border-radius: 8px; margin: 8px 0; }
-      table { width: 100%; border-collapse: collapse; margin: 12px 0; }
-      td, th { border: 1px solid #cbd5e1; padding: 8px; font-size: 13px; text-align: left; }
-      tr { page-break-inside: avoid; break-inside: avoid; }
-      .custom-block-wrapper { margin: 1.5rem 0; padding: 1rem; border: 1px solid #e2e8f0; border-radius: 0.75rem; background-color: #f8fafc; }
+      h1 { font-size: 28px; font-weight: bold; margin-top: 0; margin-bottom: 20px; color: #111827; border-bottom: 1px solid #e5e7eb; padding-bottom: 10px; }
+      p { font-size: 14px; line-height: 1.6; margin-top: 0; margin-bottom: 12px; color: #1f2937; white-space: pre-wrap; }
     `;
     tempContainer.appendChild(styleElement);
 
     const contentDiv = document.createElement("div");
-    contentDiv.innerHTML = htmlContent;
+    
+    // Add title if present
+    if (title && title.trim()) {
+      const h1 = document.createElement("h1");
+      h1.innerText = title;
+      contentDiv.appendChild(h1);
+    }
+
+    // Split description by double newlines or single newlines to preserve blocks
+    const blocks = description.split(/\n\n+/);
+    blocks.forEach((blockText) => {
+      if (blockText.trim()) {
+        const p = document.createElement("p");
+        p.innerText = blockText;
+        contentDiv.appendChild(p);
+      }
+    });
+
     tempContainer.appendChild(contentDiv);
     document.body.appendChild(tempContainer);
 
@@ -99,29 +81,7 @@ export const exportLexicalToPdf = async (
       return elemRect.bottom - containerRect.top;
     };
 
-    const elements: HTMLElement[] = [];
-    const traverse = (node: HTMLElement) => {
-      const tagName = node.tagName.toLowerCase();
-      if (tagName === "ul" || tagName === "ol") {
-        Array.from(node.children).forEach((child) => {
-          traverse(child as HTMLElement);
-        });
-      } else if (tagName === "table") {
-        const rows = node.querySelectorAll("tr");
-        if (rows.length > 0) {
-          rows.forEach((row) => traverse(row as HTMLElement));
-        } else {
-          elements.push(node);
-        }
-      } else {
-        elements.push(node);
-      }
-    };
-
-    Array.from(contentDiv.children).forEach((child) => {
-      traverse(child as HTMLElement);
-    });
-
+    const elements = Array.from(contentDiv.children) as HTMLElement[];
     const pageHeightPx = 971; // 257mm printable height on A4 format at 680px width
     const breaks: number[] = [0];
     let currentPageStart = 0;
@@ -156,19 +116,12 @@ export const exportLexicalToPdf = async (
       windowWidth: 680,
       windowHeight: tempContainer.scrollHeight,
       height: tempContainer.scrollHeight,
-      ignoreElements: (element) => {
-        return (
-          element.classList &&
-          (element.classList.contains("dark") ||
-            element.classList.contains("light"))
-        );
-      },
     });
 
     document.body.removeChild(tempContainer);
 
     if (!canvas || canvas.width === 0 || canvas.height === 0) {
-      throw new Error("Failed to capture editor snapshot");
+      throw new Error("Failed to capture snapshot");
     }
 
     const pdf = new jsPDF({
@@ -219,7 +172,7 @@ export const exportLexicalToPdf = async (
       pdf.addImage(pageImgData, "PNG", 15, 20, imgWidth, pageImgHeight);
     }
 
-    pdf.save("document.pdf");
+    pdf.save(`${title || "document"}.pdf`);
     if (showAlert) {
       showAlert("Success", "PDF exported successfully with margins!");
     }

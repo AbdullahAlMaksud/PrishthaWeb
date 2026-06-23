@@ -51,6 +51,7 @@
     "editorjs-text-color-plugin": "^2.0.4",
     "file-saver": "^2.0.5",
     "html2canvas": "^1.4.1",
+    "html2canvas-pro": "^2.1.0",
     "jspdf": "^3.0.4",
     "lexical": "^0.45.0",
     "lucide-react": "^0.555.0",

@@ -11,6 +11,7 @@ import {
   $isRangeSelection,
   DOMExportOutput,
   LexicalEditor,
+  DOMConversionMap,
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { Button } from "@/components/ui/button";
@@ -101,6 +102,10 @@ export class CustomBlockNode extends DecoratorNode<React.JSX.Element> {
       blockType: this.__blockType,
       blockData: this.__blockData,
     };
+  }
+
+  static importDOM(): DOMConversionMap | null {
+    return null;
   }
 
   exportDOM(editor: LexicalEditor): DOMExportOutput {

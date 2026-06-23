@@ -126,7 +126,11 @@ const PRESET_COLORS = [
   { name: "White", value: "#ffffff" },
 ];
 
-export const LexicalToolbar: React.FC = () => {
+interface ILexicalToolbarProps {
+  showPrompt?: (title: string, defaultValue: string, onSubmit: (value: string) => void) => void;
+}
+
+export const LexicalToolbar: React.FC<ILexicalToolbarProps> = ({ showPrompt }) => {
   const [editor] = useLexicalComposerContext();
   const [isBold, setIsBold] = useState(false);
   const [isItalic, setIsItalic] = useState(false);
@@ -364,9 +368,12 @@ export const LexicalToolbar: React.FC = () => {
 
   // Link insertions
   const insertLink = () => {
-    const url = prompt("Enter link URL:");
-    if (url !== null) {
-      editor.dispatchCommand(TOGGLE_LINK_COMMAND, url);
+    if (showPrompt) {
+      showPrompt("Enter link URL", "https://", (url) => {
+        if (url !== null && url.trim()) {
+          editor.dispatchCommand(TOGGLE_LINK_COMMAND, url.trim());
+        }
+      });
     }
   };
 

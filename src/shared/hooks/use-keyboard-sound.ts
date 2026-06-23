@@ -6,7 +6,7 @@ import { useEffect, useRef } from "react";
 export const useKeyboardSound = (
   enabled: boolean,
   targetRef?: React.RefObject<HTMLElement | null>,
-  useAudioFile: boolean = true
+  soundType: string = "default"
 ) => {
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
@@ -14,52 +14,106 @@ export const useKeyboardSound = (
   useEffect(() => {
     if (!enabled) return;
 
-    // Initialize audio file
-    if (useAudioFile && typeof window !== "undefined") {
-      if (!audioElementRef.current) {
-        audioElementRef.current = new Audio("/audio/keypress-sound.mp3");
-        audioElementRef.current.volume = 0.3;
-        audioElementRef.current.preload = "auto";
-      }
-    } else {
-      // Initialize AudioContext for synthesized sound
-      if (typeof window !== "undefined" && !audioContextRef.current) {
-        const AudioContextClass =
-          window.AudioContext ||
-          (window as unknown as { webkitAudioContext: typeof AudioContext })
-            .webkitAudioContext;
-        audioContextRef.current = new AudioContextClass();
-      }
+    // Initialize AudioContext if we are using synthesized sounds
+    if (soundType !== "default" && typeof window !== "undefined" && !audioContextRef.current) {
+      const AudioContextClass =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      audioContextRef.current = new AudioContextClass();
     }
 
     const playKeySound = () => {
-      if (useAudioFile && audioElementRef.current) {
-        // Play audio file
+      if (soundType === "default" && typeof window !== "undefined") {
+        // Play typewriter audio file
+        if (!audioElementRef.current) {
+          audioElementRef.current = new Audio("/audio/keypress-sound.mp3");
+          audioElementRef.current.volume = 0.3;
+          audioElementRef.current.preload = "auto";
+        }
         const audio = audioElementRef.current.cloneNode() as HTMLAudioElement;
         audio.volume = 0.3;
         audio.play().catch(() => {
           // Ignore play errors
         });
-      } else if (audioContextRef.current) {
-        // Play synthesized sound
-        const ctx = audioContextRef.current;
-        const oscillator = ctx.createOscillator();
-        const gainNode = ctx.createGain();
+      } else {
+        // Synthesize sound using AudioContext (mechanical, digital, bubble)
+        if (typeof window === "undefined") return;
+        const ctx = audioContextRef.current || new (window.AudioContext || (window as any).webkitAudioContext)();
+        if (!audioContextRef.current) {
+          audioContextRef.current = ctx;
+        }
 
-        oscillator.connect(gainNode);
+        // Resume AudioContext if suspended (browser security block)
+        if (ctx.state === "suspended") {
+          ctx.resume();
+        }
+
+        const now = ctx.currentTime;
+        const gainNode = ctx.createGain();
         gainNode.connect(ctx.destination);
 
-        oscillator.frequency.value = 800 + Math.random() * 200;
-        oscillator.type = "sine";
+        if (soundType === "mechanical") {
+          // Cherry MX Clicky Switch Synthesis
+          // Click transient (high-frequency sharp tick)
+          const osc1 = ctx.createOscillator();
+          const gain1 = ctx.createGain();
+          osc1.connect(gain1);
+          gain1.connect(gainNode);
 
-        gainNode.gain.setValueAtTime(0.1, ctx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(
-          0.01,
-          ctx.currentTime + 0.05
-        );
+          osc1.type = "triangle";
+          osc1.frequency.setValueAtTime(3200, now);
+          osc1.frequency.exponentialRampToValueAtTime(900, now + 0.008);
+          
+          gain1.gain.setValueAtTime(0.18, now);
+          gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.012);
 
-        oscillator.start(ctx.currentTime);
-        oscillator.stop(ctx.currentTime + 0.05);
+          // Plastic bottom-out thud (low-frequency resonance)
+          const osc2 = ctx.createOscillator();
+          const gain2 = ctx.createGain();
+          osc2.connect(gain2);
+          gain2.connect(gainNode);
+
+          osc2.type = "sine";
+          osc2.frequency.setValueAtTime(140, now);
+          osc2.frequency.linearRampToValueAtTime(70, now + 0.035);
+
+          gain2.gain.setValueAtTime(0.35, now);
+          gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
+
+          osc1.start(now);
+          osc1.stop(now + 0.015);
+          osc2.start(now);
+          osc2.stop(now + 0.04);
+
+        } else if (soundType === "digital") {
+          // Digital Click / Beep
+          const osc = ctx.createOscillator();
+          osc.connect(gainNode);
+
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(950 + Math.random() * 80, now);
+
+          gainNode.gain.setValueAtTime(0.06, now);
+          gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.022);
+
+          osc.start(now);
+          osc.stop(now + 0.025);
+
+        } else if (soundType === "bubble") {
+          // Bubble Pop Sound
+          const osc = ctx.createOscillator();
+          osc.connect(gainNode);
+
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(220, now);
+          osc.frequency.exponentialRampToValueAtTime(1300, now + 0.04); // rapid frequency sweep up
+
+          gainNode.gain.setValueAtTime(0.18, now);
+          gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.042);
+
+          osc.start(now);
+          osc.stop(now + 0.045);
+        }
       }
     };
 
@@ -81,5 +135,5 @@ export const useKeyboardSound = (
     return () => {
       target.removeEventListener("keydown", handleKeyDown as EventListener);
     };
-  }, [enabled, targetRef, useAudioFile]);
+  }, [enabled, targetRef, soundType]);
 };

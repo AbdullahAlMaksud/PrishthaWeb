@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
@@ -22,6 +22,8 @@ import { SelectionTooltip } from "./selection-tooltip";
 import { CustomBlockNode } from "./custom-block-node";
 import { useKeyboardSound } from "@/shared/hooks/use-keyboard-sound";
 import { listRichFiles } from "@/shared/lib/local-storage";
+import { exportLexicalToTxt, exportLexicalToPdf } from "./lexical-export";
+import { Volume2, VolumeX } from "lucide-react";
 
 export interface ILexicalRichTextEditorProps {
   fileId?: string | null;
@@ -34,6 +36,10 @@ export interface ILexicalRichTextEditorProps {
     showPreview?: boolean;
   }>;
   keyboardSoundEnabled: boolean;
+  keyboardSoundType: string;
+  onToggleSound?: (enabled: boolean) => void;
+  showAlert?: (title: string, desc: string) => void;
+  showPrompt?: (title: string, defaultValue: string, onSubmit: (value: string) => void) => void;
 }
 
 const loadInitialEditorState = (fileId: string | null | undefined): string | undefined => {
@@ -81,6 +87,10 @@ export const LexicalRichTextEditor: React.FC<ILexicalRichTextEditorProps> = ({
   onFileSaved,
   actionsRef,
   keyboardSoundEnabled,
+  keyboardSoundType,
+  onToggleSound,
+  showAlert,
+  showPrompt,
 }) => {
   const [showPreview, setShowPreview] = useState(false);
   const [activeEditorState, setActiveEditorState] = useState<string>("");
@@ -91,7 +101,7 @@ export const LexicalRichTextEditor: React.FC<ILexicalRichTextEditorProps> = ({
   const editorRef = useRef<HTMLDivElement>(null);
 
   // Enable keyboard sounds
-  useKeyboardSound(keyboardSoundEnabled, undefined, true);
+  useKeyboardSound(keyboardSoundEnabled, undefined, keyboardSoundType);
 
   const initialConfig = {
     namespace: "PrishthaRichEditor",
@@ -110,45 +120,48 @@ export const LexicalRichTextEditor: React.FC<ILexicalRichTextEditorProps> = ({
   };
 
   // Sync actions to parent actionsRef for Navbar trigger
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     if (!editorInstance) return;
     import("@/shared/lib/local-storage").then(({ saveRichFile, updateRichFile }) => {
       const editorStateObj = editorInstance.getEditorState().toJSON();
       if (fileId) {
         updateRichFile(fileId, editorStateObj);
-        alert("File saved successfully!");
+        if (showAlert) {
+          showAlert("Success", "File saved successfully!");
+        }
       } else {
-        const name = prompt("Enter file name:", "Untitled Rich Document");
-        if (name) {
-          const newFile = saveRichFile(name, editorStateObj);
-          if (onFileSaved) {
-            onFileSaved(newFile.id);
-          }
-          alert("File saved successfully!");
+        if (showPrompt) {
+          showPrompt("Enter file name", "Untitled Rich Document", (name) => {
+            if (name && name.trim()) {
+              const newFile = saveRichFile(name.trim(), editorStateObj);
+              if (onFileSaved) {
+                onFileSaved(newFile.id);
+              }
+              if (showAlert) {
+                showAlert("Success", "File saved successfully!");
+              }
+            }
+          });
         }
       }
     });
-  };
+  }, [editorInstance, fileId, onFileSaved, showAlert, showPrompt]);
 
   useEffect(() => {
     if (actionsRef && editorInstance) {
       actionsRef.current = {
         save: handleSave,
         downloadTxt: () => {
-          import("./lexical-export").then(({ exportLexicalToTxt }) => {
-            exportLexicalToTxt(editorInstance);
-          });
+          exportLexicalToTxt(editorInstance);
         },
         downloadPdf: () => {
-          import("./lexical-export").then(({ exportLexicalToPdf }) => {
-            exportLexicalToPdf(editorInstance);
-          });
+          exportLexicalToPdf(editorInstance, showAlert);
         },
         togglePreview: () => setShowPreview((prev) => !prev),
         showPreview: showPreview,
       };
     }
-  }, [editorInstance, fileId, showPreview, actionsRef, activeEditorState]);
+  }, [editorInstance, showPreview, actionsRef, showAlert, handleSave]);
 
   // Plugin to expose editor context ref
   const CaptureEditorPlugin = () => {
@@ -191,7 +204,7 @@ export const LexicalRichTextEditor: React.FC<ILexicalRichTextEditorProps> = ({
   return (
     <div
       ref={editorRef}
-      className="w-full h-full bg-background flex flex-col px-6 md:px-12 pt-8 pb-8 overflow-hidden"
+      className="w-full h-full bg-transparent flex flex-col px-6 md:px-12 pt-8 pb-8 overflow-hidden"
     >
       <div
         className={`grid h-full w-full min-h-0 ${
@@ -202,7 +215,7 @@ export const LexicalRichTextEditor: React.FC<ILexicalRichTextEditorProps> = ({
         <div className="flex flex-col h-full min-h-0 bg-card border border-border/40 rounded-2xl p-6 md:p-10 shadow-lg relative">
           <LexicalComposer initialConfig={initialConfig}>
             {/* Toolbar */}
-            <LexicalToolbar />
+            <LexicalToolbar showPrompt={showPrompt} />
 
             {/* Editor Canvas */}
             <div className="flex-1 w-full min-h-0 overflow-y-auto mt-4 relative">
@@ -227,14 +240,30 @@ export const LexicalRichTextEditor: React.FC<ILexicalRichTextEditorProps> = ({
             </div>
 
             {/* Footer Statistics */}
-            <div className="flex items-center justify-between border-t pt-4 mt-6 text-sm text-muted-foreground shrink-0">
+            <div className="flex items-center justify-between border-t pt-4 mt-6 text-sm text-muted-foreground shrink-0 animate-fade-in">
               <div className="flex gap-4">
                 <span>Characters: {charCount}</span>
                 <span>•</span>
                 <span>Words: {wordCount}</span>
               </div>
-              <div className="text-xs uppercase tracking-wider">
-                {fileId ? "Saved locally" : "Draft"}
+              <div className="flex items-center gap-3">
+                {onToggleSound && (
+                  <button
+                    onClick={() => onToggleSound(!keyboardSoundEnabled)}
+                    className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                    title={keyboardSoundEnabled ? "Mute typing sounds" : "Unmute typing sounds"}
+                    aria-label="Toggle typing sound"
+                  >
+                    {keyboardSoundEnabled ? (
+                      <Volume2 className="h-4 w-4" />
+                    ) : (
+                      <VolumeX className="h-4 w-4" />
+                    )}
+                  </button>
+                )}
+                <span className="text-xs uppercase tracking-wider">
+                  {fileId ? "Saved locally" : "Draft"}
+                </span>
               </div>
             </div>
           </LexicalComposer>

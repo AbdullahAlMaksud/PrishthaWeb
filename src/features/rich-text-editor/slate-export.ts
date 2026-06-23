@@ -22,15 +22,20 @@ export const exportToTxt = (value: Descendant[]): void => {
   URL.revokeObjectURL(url);
 };
 
-export const exportToPdf = async (value: Descendant[]): Promise<void> => {
+export const exportToPdf = async (
+  value: Descendant[],
+  showAlert?: (title: string, desc: string) => void
+): Promise<void> => {
   try {
     if (!value || value.length === 0) {
-      alert("No content to export. Please add some text first.");
+      if (showAlert) {
+        showAlert("Warning", "No content to export. Please add some text first.");
+      }
       return;
     }
 
     const { default: jsPDF } = await import("jspdf");
-    const { default: html2canvas } = await import("html2canvas");
+    const { default: html2canvas } = await import("html2canvas-pro");
 
     // Helper to ensure color is in hex format
     const ensureHexColor = (color: string | undefined): string | undefined => {
@@ -61,11 +66,14 @@ export const exportToPdf = async (value: Descendant[]): Promise<void> => {
     // Create a temporary container for clean rendering
     const tempContainer = document.createElement("div");
     tempContainer.style.cssText = `
-      position: absolute;
+      position: fixed;
       left: -9999px;
       top: 0;
+      z-index: -100;
+      opacity: 1;
+      pointer-events: none;
       width: 800px;
-      padding: 40px 40px 80px 40px;
+      padding: 60px 60px 80px 60px;
       background-color: #ffffff;
       font-family: Arial, sans-serif;
       font-size: 16px;
@@ -151,7 +159,9 @@ export const exportToPdf = async (value: Descendant[]): Promise<void> => {
     const htmlContent = renderContent(value);
 
     if (!htmlContent || htmlContent.trim() === "") {
-      alert("No content to export. Please add some text first.");
+      if (showAlert) {
+        showAlert("Warning", "No content to export. Please add some text first.");
+      }
       return;
     }
 
@@ -159,7 +169,7 @@ export const exportToPdf = async (value: Descendant[]): Promise<void> => {
     document.body.appendChild(tempContainer);
 
     // Wait a moment for fonts to load
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 150));
 
     const canvas = await html2canvas(tempContainer, {
       scale: 2,
@@ -176,48 +186,69 @@ export const exportToPdf = async (value: Descendant[]): Promise<void> => {
             element.classList.contains("light"))
         );
       },
-      onclone: (clonedDoc) => {
-        const stylesheets = clonedDoc.querySelectorAll(
-          'link[rel="stylesheet"], style'
-        );
-        stylesheets.forEach((sheet) => sheet.remove());
-      },
     });
 
     document.body.removeChild(tempContainer);
 
     if (!canvas || canvas.width === 0 || canvas.height === 0) {
-      throw new Error("Failed to capture content");
+      throw new Error("Failed to capture snapshot");
     }
 
-    const imgData = canvas.toDataURL("image/png");
     const pdf = new jsPDF({
       orientation: "portrait",
       unit: "mm",
       format: "a4",
     });
 
-    const imgWidth = 210;
-    const pageHeight = 297;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    let heightLeft = imgHeight;
-    let position = 0;
+    const imgWidth = 180; // 210 - 2 * 15
+    const printableHeight = 257; // 297 - 2 * 20
+    const pageHeightPx = (canvas.width * printableHeight) / imgWidth;
+    let yOffset = 0;
 
-    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
+    while (yOffset < canvas.height) {
+      const pageCanvas = document.createElement("canvas");
+      pageCanvas.width = canvas.width;
+      pageCanvas.height = Math.min(pageHeightPx, canvas.height - yOffset);
 
-    while (heightLeft >= 0) {
-      position = heightLeft - imgHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+      const ctx = pageCanvas.getContext("2d");
+      if (ctx) {
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+        ctx.drawImage(
+          canvas,
+          0,
+          yOffset,
+          canvas.width,
+          pageCanvas.height,
+          0,
+          0,
+          canvas.width,
+          pageCanvas.height
+        );
+      }
+
+      if (yOffset > 0) {
+        pdf.addPage();
+      }
+
+      const pageImgData = pageCanvas.toDataURL("image/png");
+      const pageImgHeight = (pageCanvas.height * imgWidth) / pageCanvas.width;
+
+      pdf.addImage(pageImgData, "PNG", 15, 20, imgWidth, pageImgHeight);
+
+      yOffset += pageHeightPx;
     }
 
     pdf.save("document.pdf");
+    if (showAlert) {
+      showAlert("Success", "PDF exported successfully with margins!");
+    }
   } catch (error) {
     console.error("Error exporting PDF:", error);
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
-    alert(`Failed to export PDF: ${errorMessage}\n\nPlease try again.`);
+    if (showAlert) {
+      showAlert("Error", `Failed to export PDF: ${errorMessage}. Please try again.`);
+    }
   }
 };

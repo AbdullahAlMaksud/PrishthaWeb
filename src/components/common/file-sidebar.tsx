@@ -30,12 +30,14 @@ export interface IFileSidebarProps {
   onNewFile: (type: "simple" | "rich") => void;
   isOpen: boolean;
   currentFileId: string | null;
+  showPrompt?: (title: string, defaultValue: string, onSubmit: (value: string) => void) => void;
 }
 
 export const FileSidebar: React.FC<IFileSidebarProps> = ({
   onSelectFile,
   onNewFile,
   currentFileId,
+  showPrompt,
 }) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [simpleFiles, setSimpleFiles] = useState<SavedFile<any>[]>([]);
@@ -67,14 +69,17 @@ export const FileSidebar: React.FC<IFileSidebarProps> = ({
   };
 
   const handleRename = (id: string, currentName: string, type: "simple" | "rich") => {
-    const newName = prompt("Rename document:", currentName);
-    if (newName && newName.trim()) {
-      if (type === "simple") {
-        renameSimpleFile(id, newName.trim());
-      } else {
-        renameRichFile(id, newName.trim());
-      }
-      refreshFiles();
+    if (showPrompt) {
+      showPrompt("Rename document", currentName, (newName) => {
+        if (newName && newName.trim()) {
+          if (type === "simple") {
+            renameSimpleFile(id, newName.trim());
+          } else {
+            renameRichFile(id, newName.trim());
+          }
+          refreshFiles();
+        }
+      });
     }
   };
 
