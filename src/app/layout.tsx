@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   description:
     "A modern text editor with simple and rich text editing capabilities",
   icons: {
-    icon: "/favicon.svg",
+    icon: "/logo.svg",
   },
 };
 
